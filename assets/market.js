@@ -39,7 +39,13 @@
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   var drawer = null, pulling = null;
-  function closeChat() { if (drawer) { drawer.remove(); drawer = null; } clearInterval(pulling); }
+  var afterChat = null, badgePoll = null;
+  function closeChat() {
+    var was = !!drawer;
+    if (drawer) { drawer.remove(); drawer = null; }
+    clearInterval(pulling);
+    if (was) { if (afterChat) afterChat(); if (badgePoll) badgePoll(); }
+  }
   function openChat(id, title) {
     closeChat();
     var list = el("div", { cls: "cm-list" }), inp = el("input", { placeholder: "הודעה...", maxLength: 1000 });
@@ -52,6 +58,7 @@
         if (!Array.isArray(rows) || !rows.length) return;
         rows.forEach(function (msg) { last = Math.max(last, msg.id); list.appendChild(el("div", { cls: "cm-b " + (msg.mine ? "mine" : "theirs"), text: msg.text })); });
         list.scrollTop = list.scrollHeight;
+        if (badgePoll) badgePoll();
       });
     }
     function sendMsg() {
@@ -113,6 +120,7 @@
       });
     }
     var timer = setInterval(load, 15000);
+    if (always) afterChat = load;
     setTimeout(load, 0);
     return box;
   }
@@ -413,6 +421,7 @@
     root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה" }]));
     var holder = el("div");
     root.appendChild(holder);
+    afterChat = function () { draw(); };
     function draw() {
       api("GET", "requests/" + id).then(function (r) {
         holder.textContent = "";
@@ -482,7 +491,7 @@
     var out = [];
     function act(label, url, data, confirmText, primary) {
       var b = el("button", { cls: "btn" + (primary ? " primary" : ""), type: "button", text: label });
-      b.addEventListener("click", function () { if (confirmText && !confirm(confirmText)) return; api("POST", url, data || { request_id: r.id }).then(redraw); });
+      b.addEventListener("click", function () { (confirmText ? ktAsk(confirmText, { ok: label }) : Promise.resolve(true)).then(function (ok) { if (ok) api("POST", url, data || { request_id: r.id }).then(redraw); }); });
       return b;
     }
     var btns = el("div", { cls: "vstack" });
@@ -594,6 +603,7 @@
       if (h.indexOf("/rules/") > 0) on = location.pathname.indexOf("/market/rules") === 0;
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
+    badgePoll = null;
     if (!me) {
       box.appendChild(el("a", { href: "#/login", text: "התחברות" })); box.appendChild(el("a", { cls: "hbtn", href: "#/register", text: "הרשמה" }));
       return;
@@ -621,7 +631,7 @@
         badge.textContent = n ? String(n) : "";
       });
     }
-    poll(); badgeTimer = setInterval(poll, 20000);
+    badgePoll = poll; poll(); badgeTimer = setInterval(poll, 20000);
   }
 
   function contactAdminPage() {
@@ -654,6 +664,7 @@
 
   // ---- router
   function route() {
+    afterChat = null;
     closeChat();
     root.textContent = "";
     renderHeader();

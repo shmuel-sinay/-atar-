@@ -101,6 +101,9 @@ def clip(v, n):
 def limited(key, limit, window):
     now = time.time()
     with lock:
+        if len(hits) > 5000:
+            for k in [k for k, v in hits.items() if not v or now - v[-1] > 86400]:
+                del hits[k]
         recent = [t for t in hits.get(key, []) if now - t < window]
         if len(recent) >= limit:
             hits[key] = recent
@@ -312,7 +315,7 @@ def contact_admin(h, d):
         return h.reply(400, {"error": "fields"})
     u = session_user(h)
     with db() as c:
-        if c.execute("SELECT COUNT(*) FROM contact WHERE done=0").fetchone()[0] > 500:
+        if c.execute("SELECT COUNT(*) FROM contact WHERE done=0 AND created>?", (int(time.time()) - 86400,)).fetchone()[0] > 300:
             return h.reply(429, {"error": "slow down"})
         c.execute("INSERT INTO contact(user_id,name,contact,subject,message,created) VALUES(?,?,?,?,?,?)",
                   (u["id"] if u else None, name, contact, subject, message, int(time.time())))
@@ -617,14 +620,12 @@ def client_routes(h, method, sub, d, u):
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/found" and r["status"] == "open":
             c.execute("UPDATE requests SET status='taken' WHERE id=?", (rid,))
-            award(c, u, rid)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/reopen" and r["status"] == "taken":
             c.execute("UPDATE requests SET status='open', chosen_bid=NULL, taken_pro=NULL WHERE id=?", (rid,))
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/done" and r["status"] in ("taken", "open"):
             c.execute("UPDATE requests SET status='done' WHERE id=?", (rid,))
-            award(c, u, rid)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/close" and r["status"] in ("review", "open"):
             c.execute("UPDATE requests SET status='closed' WHERE id=?", (rid,))
@@ -697,7 +698,7 @@ def reward_signup(c, uid, ref):
 
 
 def award(c, client, rid):
-    """Bonus once per brought-in client, the first time he actually orders (picks a pro or finishes a job)."""
+    """Bonus once per brought-in client, the first time he picks a pro's bid (a real order, not a self-marked status)."""
     ref = client["referred_by"]
     if not ref or ref == client["id"]:
         return
@@ -795,6 +796,9 @@ def chat_routes(h, method, sub, d, u):
                               else "UPDATE chats SET pro_read=MAX(pro_read,?) WHERE id=?", (rows[-1]["id"], ch["id"]))
                 return h.reply(200, [{"id": m["id"], "mine": m["sender_id"] == u["id"], "text": m["text"], "at": m["created"]} for m in rows])
             if method == "POST" and parts[2] == "send":
+                other = ch["pro_id"] if u["id"] == ch["client_id"] else ch["client_id"]
+                if not c.execute("SELECT 1 FROM users WHERE id=? AND status='active'", (other,)).fetchone():
+                    return h.reply(403, {"error": "inactive"})
                 text = clip(d.get("text"), 1000)
                 if not text:
                     return h.reply(400, {"error": "empty"})

@@ -100,7 +100,7 @@
       if (u.status === "blocked") acts.appendChild(btn("ביטול חסימה", function () { set({ status: "active" }); }));
       if (u.role === "pro" && u.photo === 1) acts.appendChild(btn("אישור תמונה", function () { call("POST", "photo", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
       if (u.role === "pro" && u.photo) acts.appendChild(btn("הסרת תמונה", function () { call("POST", "photo", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
-      if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { if (confirm("לחסום את " + u.name + "?")) set({ status: "blocked" }); }, true));
+      if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { ktAsk("לחסום את " + u.name + "?", { danger: true }).then(function (ok) { if (ok) set({ status: "blocked" }); }); }, true));
       var kids = lines.slice();
       if (u.role === "pro") {
         kids.push(el("div", { cls: "usettings" }, [el("label", { cls: "f", text: "רמה" }, [lvl]), el("label", { cls: "f", text: "דירוג הנהלה" }, [rating]),
@@ -117,13 +117,13 @@
       var acts = el("div", { cls: "act" });
       function setS(s) { call("POST", "request", { id: r.id, status: s }).then(function () { note("נשמר"); load(); }); }
       if (r.status === "review") acts.appendChild(btn("אישור ופרסום", function () { setS("open"); }));
-      if (r.status !== "closed") acts.appendChild(btn("סגירה", function () { if (confirm("לסגור?")) setS("closed"); }, true));
+      if (r.status !== "closed") acts.appendChild(btn("סגירה", function () { ktAsk("לסגור?", { danger: true }).then(function (ok) { if (ok) setS("closed"); }); }, true));
       var bidsBox = null;
       if (r.via_admin && r.bids && r.bids.length) {
         bidsBox = el("div", {}, [el("div", { cls: "meta", text: "הצעות (פרטי הקשר למסירה ללקוח):" })]);
         r.bids.forEach(function (b) {
           var row = el("div", { cls: "msg", text: b.pro.name + " · " + b.pro.email + " · מחיר: " + b.price + (b.days ? " · זמן: " + b.days : "") + (b.note ? " · " + b.note : "") + (b.chosen ? " · נבחר" : "") });
-          if (r.status === "open") row.appendChild(btn(" בחירה בהצעה", function () { if (confirm("לבחור בהצעה הזאת?")) call("POST", "choose", { request_id: r.id, bid_id: b.id }).then(function () { note("נשמר"); load(); }); }));
+          if (r.status === "open") row.appendChild(btn(" בחירה בהצעה", function () { ktAsk("לבחור בהצעה הזאת?").then(function (ok) { if (ok) call("POST", "choose", { request_id: r.id, bid_id: b.id }).then(function () { note("נשמר"); load(); }); }); }));
           bidsBox.appendChild(row);
         });
       }
@@ -139,7 +139,7 @@
     data.credits.forEach(function (c) {
       var off = c.status === "rejected";
       var acts = el("div", { cls: "act" }, [off ? btn("החזרה", function () { call("POST", "credit", { id: c.id, status: "approved" }).then(function () { note("נשמר"); load(); }); })
-        : btn("ביטול (למשל הרשמה מזויפת)", function () { if (confirm("לבטל את התגמול?")) call("POST", "credit", { id: c.id, status: "rejected" }).then(function () { note("נשמר"); load(); }); }, true)]);
+        : btn("ביטול (למשל הרשמה מזויפת)", function () { ktAsk("לבטל את התגמול?", { danger: true }).then(function (ok) { if (ok) call("POST", "credit", { id: c.id, status: "rejected" }).then(function () { note("נשמר"); load(); }); }); }, true)]);
       cl.appendChild(el("div", { cls: "box" + (off ? " done" : "") }, [el("strong", { text: c.partner + " · " + c.amount + " " + data.unit + (off ? " · בוטל" : "") }),
         el("div", { cls: "meta", text: KIND[c.kind] + ": " + c.referred + " · " + c.email }), acts]));
     });
@@ -202,7 +202,7 @@
         var act = el("div", "act"), d = el("button", "btn sm", r.done ? "סמן כפתוח" : "סמן כטופל"), x = el("button", "btn sm", "מחיקה");
         d.type = x.type = "button";
         d.onclick = function () { call("POST", "contact/done", { id: r.id }).then(load); };
-        x.onclick = function () { if (confirm("למחוק את הפנייה?")) call("POST", "contact/delete", { id: r.id }).then(load); };
+        x.onclick = function () { ktAsk("למחוק את הפנייה?", { danger: true }).then(function (ok) { if (ok) call("POST", "contact/delete", { id: r.id }).then(load); }); };
         act.appendChild(d); act.appendChild(x); card.appendChild(act); box.appendChild(card);
       });
     }).catch(function () {});
