@@ -35,9 +35,10 @@
   if (qbox) {
     var ans = {}, step = 0;
     var Q = [
+      { k: "who", q: "למי הנגן?", opts: [["me", "בשבילי"], ["child", "בשביל ילד או נער"], ["gift", "מתנה למישהו אחר"]] },
       { k: "use", q: "בשביל מה הנגן?", hint: "אפשר לבחור כמה תשובות.", multi: true, opts: [
         ["shiurim", "לשמוע שיעורים"], ["music", "לשמוע שירים וניגונים"], ["learn", "לחזור על לימוד"],
-        ["child", "בשביל ילד"], ["record", "להקליט"], ["apps", "משחקים או תוכנות מסוימות שעובדות בלי אינטרנט"], ["light", "גם כפנס או למצלמה"]] },
+        ["record", "להקליט"], ["apps", "משחקים או תוכנות מסוימות שעובדות בלי אינטרנט"], ["light", "גם כפנס או למצלמה"]] },
       { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["own", "רק סרטונים שאצלם בעצמי במכשיר"], ["yes", "כן, גם סרטונים מבחוץ"]] },
       { k: "add", q: "תרצה להוסיף לו תוכנות בעתיד?", hint: "\"תוכנה\" כאן היא כל דבר שמוסיפים לנגן: למשל ספר שיעורים, לוח זמנים, או משהו לעבודה.", opts: [
         ["none", "לא, מספיק לי מה שיש בו"], ["safe", "כן, אבל רק מרשימה בטוחה שבדקתם"], ["any", "כן, גם דברים שאביא בעצמי"]] },
@@ -77,7 +78,8 @@
       var player = plus ? "הזמיר פלוס" : "הזמיר", tier = TIER[ans.add] || "שמור";
       var wantsApps = use.indexOf("apps") >= 0;
       if (wantsApps && tier === "שמור") tier = "שמור עם חנות פנימית";
-      if (use.indexOf("child") >= 0 && ans.add === "any") tier = "שמור עם חנות פנימית";
+      var kid = ans.who === "child";
+      if (kid && ans.add === "any") tier = "שמור עם חנות פנימית";
       var r = el("div", "qres");
       r.appendChild(el("span", "qlabel", "ההמלצה שלנו"));
       r.appendChild(el("h3", null, player + " · " + tier));
@@ -85,7 +87,8 @@
       why.appendChild(el("li", null, plus ? "בזמיר פלוס יש פי שניים מקום, פנס ומצלמה (ואפשר גם בלי מצלמה)." : "הזמיר קטן, פשוט ונוח, ומתאים בדיוק לשמיעה וללימוד."));
       why.appendChild(el("li", null, tier === "שמור" ? "ברמה השמורה יש רק מה שצריך: נגן, רדיו, הקלטה ושיעורים. אי אפשר להוסיף שום דבר, ולכן אין מה לעקוף." :
         tier === "שמור עם חנות פנימית" ? "אפשר להוסיף תוכנות, אבל רק מתוך רשימה שאנחנו בדקנו ואישרנו." : "אפשר להוסיף גם דברים מבחוץ, ועדיין אין בו אינטרנט ואין בו סרטים."));
-      if (use.indexOf("child") >= 0 && ans.add === "any") why.appendChild(el("li", null, "לילד אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
+      if (kid && ans.add === "any") why.appendChild(el("li", null, "לילד או לנער אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
+      if (ans.who === "gift") why.appendChild(el("li", null, "למתנה: אפשר לשנות רמה גם אחרי שהנגן אצל מי שקיבל אותו."));
       if (wantsApps) why.appendChild(el("li", null, "משחקים ותוכנות שעובדים בלי אינטרנט מוסיפים מתוך הרשימה הבטוחה שלנו" + (ans.add === "any" ? ", או מבחוץ לפי בחירתך." : ".")));
       if (ans.video === "own") why.appendChild(el("li", null, "אפשר לבדוק גרסה שמאפשרת לראות רק סרטונים שצולמו במכשיר עצמו, בלי שום אפשרות להכניס סרטים מבחוץ. נבדוק את זה איתך בהזמנה."));
       if (ans.video === "yes") why.appendChild(el("li", "qwarn", "סרטונים מבחוץ לא יהיו: אין אצלנו נגנים כאלה, וזה בכוונה. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו."));
@@ -93,7 +96,7 @@
       r.appendChild(why);
       var acts = el("div", "qnav");
       var go = el("a", "btn primary", "להזמנה עם ההתאמה הזאת");
-      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
+      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (kid ? " · לילד או נער" : "") + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
       var again = el("button", "btn ghost", "להתחיל מחדש"); again.type = "button";
       again.addEventListener("click", function () { ans = {}; step = 0; draw(); });
       acts.appendChild(go); acts.appendChild(again); r.appendChild(acts);
