@@ -88,3 +88,18 @@ footer.site .legal{border-top:1px solid #ffffff22;margin-top:26px;padding-top:16
 .pimg{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;margin-bottom:12px;background:var(--gold-soft)}
 .grid.c2{grid-template-columns:repeat(2,1fr)}
 @media (max-width:760px){.grid.c2{grid-template-columns:1fr}}
+
+/* shop */
+.product{display:grid;gap:10px;align-content:start}
+.product .pimg{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff;border-radius:12px;border:1px solid var(--line);cursor:zoom-in}
+.pthumbs{display:flex;gap:8px}
+.pthumbs img{width:64px;height:48px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:8px;cursor:pointer;opacity:.6}
+.pthumbs img.on{opacity:1;border-color:var(--gold)}
+.product h3{margin:4px 0 0;font-size:1.35rem}
+.product p{margin:0}
+.specs{margin:0;padding-inline-start:20px;display:grid;gap:3px;color:var(--ink-soft)}
+.product .btn{justify-self:start}
+.zoom{position:fixed;inset:0;z-index:100;background:#0b1a14e6;display:grid;place-items:center;padding:20px;cursor:zoom-out}
+.zoom img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;border-radius:10px}
+ul.feat{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+ul.feat li{background:var(--card);border:1px solid var(--line);border-inline-start:4px solid var(--gold);border-radius:10px;padding:12px 16px}
