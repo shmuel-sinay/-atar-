@@ -177,8 +177,10 @@ def fhead(title, path):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#14243f">
 <link rel="icon" href="/assets/forum-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Heebo:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{V("assets/forum.css")}">
 </head>
 <body class="forum">
@@ -192,7 +194,10 @@ def fhead(title, path):
 
 def ffoot():
     return '''</div></main>
-<footer class="ffoot"><div class="fwrap">הלוח פועל באישור ידני של ההנהלה · <a href="/market/#/contact">צור קשר עם ההנהלה</a></div></footer>
+<footer class="ffoot"><div class="fwrap">
+  <div><span class="fname">'''+FORUM+'''</span> · <span>כל בקשה ואיש מקצוע מאושרים ידנית</span></div>
+  <nav><a href="/market/">הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/">כללי הלוח</a><a href="/market/#/contact">צור קשר עם ההנהלה</a></nav>
+</div></footer>
 </body></html>
 '''
 

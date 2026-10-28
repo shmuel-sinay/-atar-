@@ -26,7 +26,7 @@
   var STAT = { review: "ממתינה לאישור", open: "פתוחה", taken: "נלקחה", done: "בוצעה", closed: "סגורה" };
   var ROLE = { client: "מבקש", pro: "איש מקצוע / חברה" };
   var UST = { active: "פעיל", pending: "ממתין לאישור", blocked: "חסום" };
-  var SIZEMAP, LEVELMAP, CATMAP;
+  var SIZEMAP, LEVELMAP, CATMAP, ufilter = "all";
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -60,36 +60,56 @@
     document.getElementById("rcount").textContent = review ? "(" + review + ")" : "";
 
     var ul = document.getElementById("ulist"); ul.textContent = "";
-    data.users.forEach(function (u) {
-      var lines = [el("strong", { text: u.name }), el("div", { cls: "meta", text: u.email + " · " + ROLE[u.role] + " · " + UST[u.status] })];
+    var FILT = [["all", "כולם"], ["pending", "ממתינים לאישור"], ["pro", "אנשי מקצוע"], ["client", "מבקשים"], ["blocked", "חסומים"]];
+    var bar = el("div", { cls: "seg" });
+    FILT.forEach(function (f) {
+      var b = el("button", { type: "button", cls: ufilter === f[0] ? "on" : "", text: f[1] });
+      b.addEventListener("click", function () { ufilter = f[0]; render(); });
+      bar.appendChild(b);
+    });
+    ul.appendChild(el("div", { cls: "toolbar" }, [bar]));
+    var shown = data.users.filter(function (u) {
+      return ufilter === "all" || (ufilter === "pending" ? (u.status === "pending" || u.photo === 1) : ufilter === "blocked" ? u.status === "blocked" : u.role === ufilter);
+    });
+    shown.forEach(function (u) {
+      var stCls = u.status === "active" ? "st-open" : u.status === "pending" ? "st-review" : "st-closed";
+      var head = el("div", { cls: "uhead" }, [el("strong", { text: u.name }),
+        el("span", { cls: "chip " + stCls, text: UST[u.status] }), el("span", { cls: "chip", text: ROLE[u.role] }),
+        u.role === "pro" ? el("span", { cls: "chip cat", text: (LEVELMAP[u.level] || "").split(" (")[0] }) : null]);
+      var lines = [head, el("div", { cls: "meta", text: u.email })];
       var lvl, rating;
+      if (u.role === "client") {
+        lines.push(el("div", { cls: "meta", text: "מבקשים נכנסים מיד ולא צריכים אישור. כל בקשה שהם מפרסמים ממתינה לאישורך בלשונית \"בקשות\"." }));
+      }
       if (u.role === "pro") {
-        lines.push(el("div", { cls: "meta", text: (u.kind === "company" ? "חברה" : "פרטי") + " · " + (u.field || "") + (u.founding ? " · חבר מייסד" : "") }));
+        lines.push(el("div", { cls: "meta", text: [u.kind === "company" ? "חברה" : "איש מקצוע פרטי", u.field, u.exp ? "ניסיון: " + u.exp : ""].filter(Boolean).join(" · ") }));
         if (u.bio) lines.push(el("p", { cls: "msg", text: u.bio }));
         if (u.links) lines.push(el("div", { cls: "meta", text: u.links.replace(/\n/g, "  ") }));
-        lines.push(el("div", { cls: "meta", text: "דירוג לקוחות: " + (u.client_rating || "אין") + " (" + u.rating_count + ")" }));
-        if (u.exp) lines.push(el("div", { cls: "meta", text: "ניסיון: " + u.exp }));
+        lines.push(el("div", { cls: "meta", text: "דירוג לקוחות: " + (u.client_rating ? u.client_rating + " (" + u.rating_count + ")" : "עדיין אין") }));
         if (u.photo) {
           var im = el("img", { cls: "thumb", alt: "", src: "/api/admin/m/photo/" + u.id + "?t=" + Date.now() });
-          lines.push(im, el("div", { cls: "meta", text: u.photo === 1 ? "תמונה ממתינה לאישור" : "תמונה מאושרת" }));
+          lines.push(el("div", { cls: "who" }, [im, el("span", { cls: "meta", text: u.photo === 1 ? "תמונה ממתינה לאישור" : "תמונה מאושרת" })]));
         }
+        if (u.status === "pending") lines.push(el("div", { cls: "note", text: "איש המקצוע ממתין לאישור. עד האישור הוא לא יכול להגיש הצעות או לפתוח שיחות." }));
         lvl = sel(LEVELMAP, u.level);
-        rating = el("input", { type: "number", min: 1, max: 5, step: 0.5, value: u.admin_rating == null ? "" : u.admin_rating, placeholder: "דירוג הנהלה" });
-        rating.style.maxWidth = "130px";
+        rating = el("input", { type: "number", min: 1, max: 5, step: 0.5, value: u.admin_rating == null ? "" : u.admin_rating, placeholder: "1 עד 5" });
       }
       var acts = el("div", { cls: "act" });
       function set(extra) { call("POST", "user", Object.assign({ id: u.id }, extra)).then(function () { note("נשמר"); load(); }).catch(function () { note("השמירה נכשלה"); }); }
-      if (u.status !== "active") acts.appendChild(btn("אישור", function () { set({ status: "active" }); }));
-      if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { if (confirm("לחסום את " + u.name + "?")) set({ status: "blocked" }); }, true));
-      if (u.role === "pro") acts.appendChild(btn(u.founding ? "ביטול חבר מייסד" : "סימון כחבר מייסד (שנה בלי עמלה)", function () { set({ founding: !u.founding }); }));
+      if (u.status === "pending") acts.appendChild(el("button", { type: "button", cls: "btn primary sm", text: "אישור הצטרפות", onclick: function () { set({ status: "active" }); } }));
+      if (u.status === "blocked") acts.appendChild(btn("ביטול חסימה", function () { set({ status: "active" }); }));
       if (u.role === "pro" && u.photo === 1) acts.appendChild(btn("אישור תמונה", function () { call("POST", "photo", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
       if (u.role === "pro" && u.photo) acts.appendChild(btn("הסרת תמונה", function () { call("POST", "photo", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
+      if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { if (confirm("לחסום את " + u.name + "?")) set({ status: "blocked" }); }, true));
+      var kids = lines.slice();
       if (u.role === "pro") {
-        acts.appendChild(lvl); acts.appendChild(rating);
-        acts.appendChild(btn("שמירת רמה ודירוג", function () { set({ level: lvl.value, admin_rating: rating.value }); }));
+        kids.push(el("div", { cls: "usettings" }, [el("label", { cls: "f", text: "רמה" }, [lvl]), el("label", { cls: "f", text: "דירוג הנהלה" }, [rating]),
+          btn("שמירה", function () { set({ level: lvl.value, admin_rating: rating.value }); })]));
       }
-      ul.appendChild(el("div", { cls: "box" }, lines.concat([acts])));
+      kids.push(acts);
+      ul.appendChild(el("div", { cls: "box ucard" + (u.status === "pending" ? " pend" : "") }, kids));
     });
+    if (!shown.length && data.users.length) ul.appendChild(el("p", { cls: "meta", text: "אין משתמשים בסינון הזה." }));
     if (!data.users.length) ul.appendChild(el("p", { cls: "meta", text: "אין משתמשים." }));
 
     var rl = document.getElementById("rlist"); rl.textContent = "";
