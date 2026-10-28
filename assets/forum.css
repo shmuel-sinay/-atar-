@@ -345,10 +345,16 @@ img.pend-photo,img.thumb{cursor:zoom-in}
 .profile{padding-top:0;overflow:hidden}
 .profile .cover{margin:0 -24px 0;height:120px;background:linear-gradient(135deg,var(--head2),var(--head)) center/cover no-repeat;border-bottom:2px solid var(--gold)}
 .profile.has-cover .cover{height:auto;aspect-ratio:3/1}
-.profile .profile-head{margin-top:-40px;align-items:flex-end}
-.profile .avatar.big{width:96px;height:96px;font-size:2rem;border:4px solid var(--card);box-shadow:var(--shadow)}
+.profile .profile-head{margin-top:0;align-items:flex-end}
+.profile .avatar.big{margin-top:-48px;width:96px;height:96px;font-size:2rem;border:4px solid var(--card);box-shadow:var(--shadow)}
 @media (max-width:560px){.profile .cover{margin:0 -18px}}
 .pend-photo.wide{width:min(450px,100%);height:auto;aspect-ratio:3/1;border-radius:10px}
 .thumb.wide{width:192px;height:64px}
 .pick.has .pick-txt{opacity:0;transition:opacity .15s}
 .pick.has:hover .pick-txt,.pick.has:focus-visible .pick-txt{opacity:1}
+.socials{display:flex;flex-wrap:wrap;gap:8px}
+.soc{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink);font-size:.88rem;background:var(--card)}
+.soc:hover{border-color:var(--brand);text-decoration:none}
+.soc svg{width:16px;height:16px;fill:currentColor}
+.soc.mt{border-color:#b7dfc8;color:var(--ok);background:var(--ok-soft)}
+.soc.mt::before{content:"✓";font-weight:700}
