@@ -183,13 +183,13 @@ class H(BaseHTTPRequestHandler):
             return self.reply(200, load_data()["services"])
         if p.startswith("/api/m/"):
             return market.handle(self, "GET", p)
+        if p.startswith("/api/admin/m/"):
+            return market.admin(self, "GET", p)
         if p.startswith("/api/admin"):
             if not ADMIN_PASS:
                 return self.reply(503, {"error": "admin disabled"})
             if not self.authed():
                 return self.reply(401, {"error": "login"})
-            if p.startswith("/api/admin/m/"):
-                return market.admin(self, "GET", p)
             if p == "/api/admin/data":
                 return self.reply(200, load_data())
             if p == "/api/admin/messages":
@@ -203,8 +203,6 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/m/"):
             return market.handle(self, "PUT", p)
         if p.startswith("/api/admin/m/"):
-            if not ADMIN_PASS or not self.authed():
-                return self.reply(401, {"error": "login"})
             return market.admin(self, "PUT", p)
         if p == "/api/admin/data":
             if not ADMIN_PASS or not self.authed():
@@ -224,8 +222,6 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/m/"):
             return market.handle(self, "POST", p)
         if p.startswith("/api/admin/m/"):
-            if not ADMIN_PASS or not self.authed():
-                return self.reply(401, {"error": "login"})
             return market.admin(self, "POST", p)
         try:
             if p == "/api/contact":

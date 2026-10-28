@@ -17,6 +17,13 @@ if ! grep -q '^KT_ADMIN_PASS=.' /etc/kt-contact/env; then
   echo "KT_ADMIN_PASS=$NEWPASS" >> /etc/kt-contact/env
   echo "=== סיסמת הניהול (מופיעה רק עכשיו, שמור אותה): $NEWPASS ==="
 fi
+# separate password for the work board admin (/market/admin/), also printed once
+if ! grep -q '^KT_MARKET_ADMIN_PASS=.' /etc/kt-contact/env; then
+  MPASS=$(python3 -c 'import secrets;print(secrets.token_urlsafe(12))')
+  sed -i '/^KT_MARKET_ADMIN_PASS=/d' /etc/kt-contact/env
+  echo "KT_MARKET_ADMIN_PASS=$MPASS" >> /etc/kt-contact/env
+  echo "=== סיסמת ניהול הלוח (מופיעה רק עכשיו, שמור אותה): $MPASS ==="
+fi
 cat > /etc/systemd/system/kt-contact.service <<'UNIT'
 [Unit]
 Description=Kosher Tek site backend (contact form, admin panel)
