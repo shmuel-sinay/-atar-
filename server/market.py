@@ -16,11 +16,19 @@ hits = {}
 
 LEVEL_RANK = {"basic": 1, "pro": 2, "secure": 3}
 LEVELS = {"basic": "בסיסי (ללא בדיקות אבטחה)", "pro": "מתקדם", "secure": "מקצועי (מפתח ברמה גבוהה, כולל בדיקות אבטחה)"}
-CATS = {"software": "תוכנה וכלים", "website": "אתר", "device": "התאמת מכשיר או מחשב", "design": "עיצוב",
-        "writing": "כתיבה ועריכה", "help": "הדרכה ועזרה טכנית", "other": "אחר"}
+# category keys are stored on requests; old keys (software, device, website...) keep their meaning
+GROUPS = [("מחשב", ["software", "office", "device"]),
+          ("אנדרואיד", ["android_app", "android_dev"]),
+          ("אינטרנט", ["website"]),
+          ("שירותים נוספים", ["design", "writing", "help", "other"])]
+CATS = {"software": "תוכנות למחשב", "office": "Office, אקסל ואוטומציה", "device": "התקנה והתאמת מחשבים",
+        "android_app": "אפליקציות אנדרואיד", "android_dev": "התאמת מכשירי אנדרואיד",
+        "website": "אתרים ודפי נחיתה",
+        "design": "עיצוב גרפי", "writing": "כתיבה ועריכה", "help": "הדרכה ועזרה טכנית", "other": "אחר"}
 SIZES = {"small": "קטנה", "medium": "בינונית", "large": "גדולה"}
 DEFAULT_SETTINGS = {
-    "base": {"software": 300, "website": 400, "device": 150, "design": 200, "writing": 100, "help": 80, "other": 150},
+    "base": {"software": 300, "office": 150, "device": 150, "android_app": 400, "android_dev": 150, "website": 400,
+             "design": 200, "writing": 100, "help": 80, "other": 150},
     "level_mult": {"basic": 1.0, "pro": 1.8, "secure": 2.8},
     "size_mult": {"small": 1.0, "medium": 2.2, "large": 4.5},
     "reward": {"amount": 10.0, "bonus": 30.0},
@@ -338,7 +346,7 @@ def route(h, method, path):
     else:
         d = h.body(20000) if method in ("POST", "PUT") else {}
     if method == "GET" and sub == "meta":
-        return h.reply(200, {"cats": CATS, "levels": LEVELS, "sizes": SIZES})
+        return h.reply(200, {"cats": CATS, "groups": GROUPS, "levels": LEVELS, "sizes": SIZES})
     if method == "POST" and sub == "estimate":
         return h.reply(200, estimate(clip(d.get("category"), 20), clip(d.get("level"), 10), clip(d.get("size"), 10)))
     if method == "GET" and sub == "pros":

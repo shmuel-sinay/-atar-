@@ -178,7 +178,7 @@ def fhead(title, path):
 <title>{html.escape(title)}</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#14243f">
-<link rel="icon" href="/assets/forum-icon.svg" type="image/svg+xml">
+<link rel="icon" href="{V("assets/forum-icon.svg")}" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Heebo:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{V("assets/forum.css")}">

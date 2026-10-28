@@ -28,7 +28,7 @@ h1,h2,h3,h4{font-family:var(--serif);font-weight:700;letter-spacing:0;line-heigh
 .fbar{background:linear-gradient(180deg,var(--head2),var(--head));color:#e9eef7;border-bottom:2px solid var(--gold);position:sticky;top:0;z-index:40}
 .fbar .fwrap{display:flex;align-items:center;flex-wrap:wrap;gap:6px 26px;min-height:62px}
 .fbrand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:700;font-size:1.45rem;color:#fff;letter-spacing:.2px}
-.fbrand::before{content:"";width:30px;height:30px;border-radius:7px;background:url(/assets/forum-icon.svg) center/cover,var(--gold);flex:none}
+.fbrand::before{content:"";width:30px;height:30px;border-radius:7px;background:url(/assets/forum-icon.svg) center/cover;flex:none;box-shadow:0 0 0 1px #ffffff26}
 .fbrand:hover{text-decoration:none;color:#fff}
 .fbar nav{display:flex;gap:4px;flex:1}
 .fbar nav a{color:#c9d3e4;font-size:.95rem;padding:6px 12px;border-radius:6px}
@@ -313,3 +313,6 @@ section.panel[id^="p-"].on{display:block}
 .jside{display:grid;gap:4px;justify-items:end;flex:none;font-size:.88rem;text-align:left}
 .jline{display:flex;gap:6px;align-items:baseline}
 .jnew{background:var(--bad);color:#fff;border-radius:999px;padding:1px 10px;font-size:.8rem;font-weight:600}
+.catnav .cgroup{display:block;font-size:.76rem;font-weight:700;color:var(--faint);padding:10px 10px 2px;letter-spacing:.3px}
+.catnav .cgroup:first-of-type{padding-top:6px}
+@media (max-width:900px){.catnav .cgroup{display:none}}
