@@ -25,8 +25,9 @@
     var pros = d.users.filter(function (u) { return u.role === "pro" && u.status === "pending"; });
     var photos = d.users.filter(function (u) { return u.role === "pro" && u.photo === 1; });
     var covers = d.users.filter(function (u) { return u.role === "pro" && u.cover === 1; });
+    var mts = d.users.filter(function (u) { return u.mt && !u.mt.verified; });
     var credits = [];
-    var total = reqs.length + pros.length + photos.length + covers.length + credits.length;
+    var total = reqs.length + pros.length + photos.length + covers.length + mts.length + credits.length;
     box.hidden = false; box.textContent = "";
     var head = el("div", { cls: "act", style: "justify-content:space-between;margin:0" }, [el("strong", { text: total ? total + " דברים ממתינים לאישור שלך" : "אין כרגע דבר שממתין לאישור" }),
       btn("פרסום בקשה בשם לקוח", function () { window.forwardToBoard({}); })]);
@@ -75,6 +76,12 @@
       card("תמונת רקע חדשה של " + u.name, [el("div", { cls: "meta", text: (u.field || "") + " · " + u.email }), img], [
         btn("אישור רקע", function () { call("POST", "cover", { id: u.id, ok: true }).then(after); }),
         btn("הסרה", function () { call("POST", "cover", { id: u.id, ok: false }).then(after); }, true)]);
+    });
+    mts.forEach(function (u) {
+      var a = el("a", { href: u.mt.url, target: "_blank", rel: "noopener noreferrer", text: "פתיחת הפרופיל במתמחים טופ: " + u.mt.user });
+      card("קישור למתמחים טופ שלא אומת: " + u.name, [el("div", { cls: "meta", text: u.email + " · אם בדקת שזה אכן הוא, אפשר לאשר ידנית." }), a], [
+        btn("אישור ידני", function () { call("POST", "mt", { id: u.id, ok: true }).then(after); }),
+        btn("הסרת הקישור", function () { call("POST", "mt", { id: u.id, ok: false }).then(after); }, true)]);
     });
     credits.forEach(function (c) {
       row("תגמול שותף: " + c.partner + " · " + c.amount + " " + d.unit, [
