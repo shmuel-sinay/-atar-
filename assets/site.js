@@ -70,6 +70,21 @@
         c.appendChild(line);
         var a = el("a", p.status === "in" ? "btn primary" : "btn ghost", p.status === "in" ? "להזמנה" : p.status === "out" ? "עדכנו אותי כשיחזור" : "לבירור והזמנה");
         a.href = "/contact/?product=" + encodeURIComponent(p.name || "");
+        if (p.tiers) {
+          var TIERS = ["שמור", "שמור עם חנות פנימית", "עם התקנה מבחוץ"];
+          var pick = el("div", "tierpick");
+          pick.appendChild(el("span", null, "רמת הכשרה:"));
+          TIERS.forEach(function (t, i) {
+            var b = el("button", i ? "" : "on", t); b.type = "button";
+            b.addEventListener("click", function () {
+              Array.prototype.forEach.call(pick.querySelectorAll("button"), function (x) { x.className = x === b ? "on" : ""; });
+              a.href = "/contact/?product=" + encodeURIComponent((p.name || "") + " · " + t);
+            });
+            pick.appendChild(b);
+          });
+          a.href = "/contact/?product=" + encodeURIComponent((p.name || "") + " · " + TIERS[0]);
+          c.appendChild(pick);
+        }
         c.appendChild(a);
         box.appendChild(c);
       });
