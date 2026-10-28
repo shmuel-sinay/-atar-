@@ -64,15 +64,48 @@
   function startChat(body, title) {
     api("POST", "chats", body).then(function (r) { if (r.id) openChat(r.id, title); });
   }
-  function chatsStrip() {
+  var hashHandler = null;
+  function go(path) { location.hash = "#/" + path; }
+  function dash(tabs) {
+    var wrap = el("div", { cls: "mk-dash" }), bar = el("nav", { cls: "mk-dtabs" }), body = el("div");
+    var btns = [];
+    function show(i) {
+      btns.forEach(function (b, k) { b.className = k === i ? "on" : ""; tabs[k].node.style.display = k === i ? "" : "none"; });
+    }
+    function fromHash() {
+      var id = (location.hash.match(/^#\/([a-z]+)/) || [])[1], i = 0;
+      tabs.forEach(function (t, k) { if (t.id === id) i = k; });
+      show(i);
+    }
+    tabs.forEach(function (t, i) {
+      var b = el("a", { href: "#/" + t.id, text: t.label });
+      btns.push(b); bar.appendChild(b); body.appendChild(t.node);
+    });
+    wrap.appendChild(bar); wrap.appendChild(body);
+    if (hashHandler) window.removeEventListener("hashchange", hashHandler);
+    hashHandler = function () { if (document.body.contains(wrap)) fromHash(); };
+    window.addEventListener("hashchange", hashHandler);
+    fromHash();
+    wrap.show = function (i) { go(tabs[i].id); };
+    return wrap;
+  }
+  function chatsStrip(always) {
     var box = el("section", { cls: "card mk-sec cm-strip" }), started = false;
-    box.style.display = "none";
-    function load() {
+    if (!always) box.style.display = "none";
+    window.addEventListener("hashchange", function () {
+    var isPro = /^#\/pro\/\d+/.test(location.hash);
+    if (isPro !== render.wasPro) { render.wasPro = isPro; if (meta.cats) render(); }
+  });
+  function load() {
       if (started && !box.isConnected) return clearInterval(timer);
       started = true;
       api("GET", "chats").then(function (rows) {
         box.textContent = "";
-        if (!Array.isArray(rows) || !rows.length) { box.style.display = "none"; return; }
+        if (!Array.isArray(rows) || !rows.length) {
+          if (always) box.appendChild(el("p", { cls: "meta", text: "אין שיחות עדיין. אפשר לפתוח שיחה מתוך כל הצעה או בקשה." }));
+          else box.style.display = "none";
+          return;
+        }
         box.style.display = "";
         var total = rows.reduce(function (n, c) { return n + c.unread; }, 0);
         box.appendChild(el("h3", { text: "הצ'אטים שלי" + (total ? " · הודעות חדשות: " + total : "") }));
@@ -224,9 +257,7 @@
 
   // ---------- client
   function clientView() {
-    var box = el("div");
-    box.appendChild(chatsStrip());
-    box.appendChild(partnerBox());
+    var dashRef = null;
     var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 5, maxLength: 3000 }), cat = select(meta.cats, "software"),
       lvl = select(meta.levels, "any", "לא משנה"), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
@@ -242,25 +273,26 @@
       m.textContent = "";
       api("POST", "requests", { title: title.value, desc: desc.value, category: cat.value, level: lvl.value, size: size.value, budget: budget.value, contact: contact.value, tagged_pro: tag.value ? Number(tag.value) : 0, only_tagged: only.checked })
         .then(function (r) {
-          if (r.ok) { title.value = desc.value = ""; m.textContent = "הבקשה נשלחה ותופיע לאנשי המקצוע לאחר אישור הנהלה."; list(); }
+          if (r.ok) { title.value = desc.value = ""; m.textContent = ""; list(); if (dashRef) dashRef.show(0); }
           else m.textContent = r.__status === 429 ? "הגעת למכסה היומית." : "נא למלא כותרת ותיאור (לפחות 10 תווים).";
         });
     });
-    box.appendChild(section("בקשה חדשה", [field("כותרת", title), field("מה צריך", desc), field("תחום", cat), field("רמה רצויה", lvl),
+    var formNode = section("בקשה חדשה", [field("כותרת", title), field("מה צריך", desc), field("תחום", cat), field("רמה רצויה", lvl),
       field("גודל העבודה", size), field("תקציב", budget), field("איך ליצור קשר", contact), field("תיוג מפתח מסוים", tag),
-      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m]));
+      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m]);
     var mine = el("div");
-    box.appendChild(mine);
     function list() {
       api("GET", "my/requests").then(function (rows) {
         mine.textContent = "";
-        if (!Array.isArray(rows) || !rows.length) { mine.appendChild(section("הבקשות שלי", [el("p", { text: "אין בקשות עדיין." })])); return; }
-        mine.appendChild(el("h2", { cls: "title", text: "הבקשות שלי" }));
+        if (!Array.isArray(rows) || !rows.length) { mine.appendChild(section("הבקשות שלי", [el("p", { text: "אין בקשות עדיין. בלשונית \"בקשה חדשה\" אפשר לפרסם את הראשונה." })])); return; }
         rows.forEach(function (r) { mine.appendChild(requestCard(r, list)); });
       });
     }
     list();
-    return box;
+    dashRef = dash([{ id: "requests", label: "הבקשות שלי", node: mine }, { id: "new", label: "בקשה חדשה", node: formNode },
+      { id: "messages", label: "הודעות", node: chatsStrip(true) }, { id: "partners", label: "שותפים", node: partnerBox() },
+      { id: "pros", label: "אנשי מקצוע", node: prosList() }]);
+    return dashRef;
   }
   function requestCard(r, refresh) {
     var kids = [r.tagged ? el("p", { cls: "mk-ok", text: "מתויג: " + r.tagged.name + (r.tagged.only ? " (גלוי רק לו)" : "") }) : null,
@@ -327,24 +359,19 @@
       box.appendChild(proProfile(me.profile));
       return box;
     }
-    var out = el("div");
-    box.appendChild(chatsStrip());
-    box.appendChild(out);
-    box.appendChild(partnerBox());
-    box.appendChild(proProfile(me.profile));
+    var out = el("div"), mineBox = el("div");
     function refresh() {
       api("GET", "board").then(function (b) {
-        out.textContent = "";
+        out.textContent = ""; mineBox.textContent = "";
+        if (!b.mine || !b.mine.length) mineBox.appendChild(section("העבודות שלי", [el("p", { text: "עדיין לא נבחרת לעבודה. כשמבקש יבחר בהצעה שלך, העבודה תופיע כאן." })]));
         if (b.mine && b.mine.length) {
-          out.appendChild(el("h2", { cls: "title", text: "העבודות שלי" }));
           b.mine.forEach(function (r) {
-            out.appendChild(section(r.title, [el("p", { cls: "meta", text: STATUS[r.status] }), el("p", { text: r.desc }),
+            mineBox.appendChild(section(r.title, [el("p", { cls: "meta", text: STATUS[r.status] }), el("p", { text: r.desc }),
               el("p", { text: "לקוח: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }),
               (function () { var cb = el("button", { cls: "btn ghost sm", type: "button", text: "צ'אט עם " + r.client.name }); cb.addEventListener("click", function () { startChat({ request_id: r.id }, r.client.name + " · " + r.title); }); return cb; })()]));
           });
         }
-        out.appendChild(el("h2", { cls: "title", text: "בקשות פתוחות" }));
-        if (!b.open || !b.open.length) out.appendChild(el("p", { cls: "sub", text: "אין כרגע בקשות פתוחות." }));
+        if (!b.open || !b.open.length) out.appendChild(section("בקשות פתוחות", [el("p", { text: "אין כרגע בקשות פתוחות." })]));
         (b.open || []).forEach(function (r) {
           var price = el("input", { placeholder: "מחיר", value: r.my_bid ? r.my_bid.price : "" }), days = el("input", { placeholder: "זמן", value: r.my_bid ? r.my_bid.days : "" }),
             note = el("input", { placeholder: "הערה", value: r.my_bid ? r.my_bid.note : "" }), m = msgBox();
@@ -362,22 +389,35 @@
       });
     }
     refresh();
-    return box;
+    return dash([{ id: "open", label: "בקשות פתוחות", node: out }, { id: "mine", label: "העבודות שלי", node: mineBox }, { id: "messages", label: "הודעות", node: chatsStrip(true) },
+      { id: "profile", label: "הפרופיל", node: proProfile(me.profile) }, { id: "partners", label: "שותפים", node: partnerBox() }, { id: "pros", label: "אנשי מקצוע", node: prosList() }]);
   }
 
   function prosList() {
     var s = el("div");
     api("GET", "pros").then(function (rows) {
-      if (!Array.isArray(rows) || !rows.length) return;
-      s.appendChild(el("h2", { cls: "title", text: "אנשי מקצוע בלוח" }));
+      if (!Array.isArray(rows) || !rows.length) { s.appendChild(section("אנשי מקצוע", [el("p", { text: "עדיין אין אנשי מקצוע מאושרים." })])); return; }
       var g = el("div", { cls: "grid c3" });
       rows.forEach(function (p) {
-        var c = el("article", { cls: "card" }, [el("div", { cls: "who" }, [avatar(p, true), el("div", {}, [el("h3", { text: p.name }), el("p", { cls: "meta", text: proLine(p) })])]),
-          p.field ? el("p", { text: p.field }) : null, p.exp ? el("p", { cls: "meta", text: "ניסיון: " + p.exp }) : null, p.bio ? el("p", { text: p.bio }) : null]);
-        linksOf(p).forEach(function (a) { c.appendChild(a); });
+        var c = el("a", { cls: "card pcard", href: "#/pro/" + p.id }, [el("div", { cls: "who" }, [avatar(p, true), el("div", {}, [el("h3", { text: p.name }), el("p", { cls: "meta", text: proLine(p) })])]),
+          p.field ? el("p", { text: p.field }) : null, el("span", { cls: "meta", text: "לפרופיל המלא ←" })]);
         g.appendChild(c);
       });
       s.appendChild(g);
+    });
+    return s;
+  }
+  function proPage(id) {
+    var s = el("div", { cls: "mk-sec" });
+    s.appendChild(el("a", { href: "#/pros", cls: "meta", text: "→ כל אנשי המקצוע" }));
+    api("GET", "pros").then(function (rows) {
+      var p = (Array.isArray(rows) ? rows : []).filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!p) { s.appendChild(el("p", { text: "הפרופיל לא נמצא." })); return; }
+      var c = el("article", { cls: "card mk-sec" }, [el("div", { cls: "who" }, [avatar(p, true), el("div", {}, [el("h2", { cls: "title", text: p.name }), el("p", { cls: "meta", text: proLine(p) })])]),
+        p.field ? el("p", {}, [el("strong", { text: "תחום: " }), p.field]) : null, p.exp ? el("p", {}, [el("strong", { text: "ניסיון: " }), p.exp]) : null,
+        p.bio ? el("p", { text: p.bio }) : null]);
+      linksOf(p).forEach(function (a) { c.appendChild(a); });
+      s.appendChild(c);
     });
     return s;
   }
@@ -385,16 +425,33 @@
   function render() {
     closeChat();
     root.textContent = "";
+    var land = document.getElementById("fland"), chip = document.getElementById("fuser");
+    if (chip) chip.textContent = "";
+    if (land) land.style.display = me ? "none" : "";
+    var pm = location.hash.match(/^#\/pro\/(\d+)/);
+    if (pm) {
+      if (land) land.style.display = "none";
+      var back = el("a", { cls: "meta", href: "#/", text: "→ חזרה ללוח" });
+      root.appendChild(back); root.appendChild(proPage(pm[1]));
+      if (me && chip) { var o2 = el("button", { type: "button", text: "יציאה" }); o2.addEventListener("click", function () { api("POST", "logout", {}).then(load); }); chip.appendChild(el("span", { text: me.name })); chip.appendChild(o2); }
+      return;
+    }
     if (me) {
-      var bar = el("div", { cls: "mk-bar" }, [el("span", { text: "שלום " + me.name + " · " + (me.role === "client" ? "מבקש" : "איש מקצוע") })]);
-      var out = el("button", { cls: "btn ghost sm", type: "button", text: "יציאה" });
-      out.addEventListener("click", function () { api("POST", "logout", {}).then(load); });
-      bar.appendChild(out); root.appendChild(bar);
+      if (chip) {
+        var out = el("button", { type: "button", text: "יציאה" });
+        out.addEventListener("click", function () { api("POST", "logout", {}).then(load); });
+        chip.appendChild(el("span", { text: me.name })); chip.appendChild(out);
+      }
       root.appendChild(me.role === "client" ? clientView() : proView());
     } else {
       root.appendChild(authView());
     }
-    root.appendChild(prosList());
+    if (!me) {
+      var dir = el("div", { cls: "mk-sec" });
+      dir.appendChild(el("h2", { cls: "title", text: "אנשי מקצוע בלוח" }));
+      dir.appendChild(prosList());
+      root.appendChild(dir);
+    }
   }
   function load() {
     api("GET", "me").then(function (r) { me = r.user || null; render(); });

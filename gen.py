@@ -176,7 +176,8 @@ def fhead(title, path):
 <body class="forum">
 <header class="fbar"><div class="fwrap">
   <a class="fbrand" href="/market/"><span class="fmark"></span>{FORUM}</a>
-  <nav><a href="/market/"{' aria-current="page"' if path == "/market/" else ""}>הלוח</a><a href="/market/rules/"{' aria-current="page"' if path == "/market/rules/" else ""}>כללי הלוח</a></nav>
+  <nav><a href="/market/"{' aria-current="page"' if path == "/market/" else ""}>הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/"{' aria-current="page"' if path == "/market/rules/" else ""}>כללי הלוח</a></nav>
+  <div id="fuser" class="fuser"></div>
 </div></header>
 <main class="fmain"><div class="fwrap">
 '''
@@ -203,7 +204,8 @@ write("/request/", r)
 
 # ---------- MARKET ----------
 mk = fhead(FORUM, "/market/")
-mk += '''<div class="fhero"><h1>%s</h1><p>מפרסמים בקשה, אנשי מקצוע מציעים מחיר, בוחרים ומדרגים. ההצטרפות והבקשות באישור ידני של ההנהלה.</p></div>
+mk += '''<div id="fland"><div class="fhero"><h1>%s</h1><p class="flead">מבקשים. מציעים. עושים.</p><p>לוח שמחבר בין מי שצריך עבודה, תוכנה או שירות לבין אנשי מקצוע וחברות שאושרו. כל בקשה, כל הצטרפות וכל תמונה עוברות אישור ידני של ההנהלה.</p></div>
+<div class="fsteps"><div><span>1</span><h3>מפרסמים בקשה</h3><p>מתארים מה צריך, ומקבלים הערכת מחיר ראשונית.</p></div><div><span>2</span><h3>מקבלים הצעות</h3><p>אנשי מקצוע מציעים מחיר וזמן, אפשר לשוחח איתם בצ'אט פרטי.</p></div><div><span>3</span><h3>בוחרים ומדרגים</h3><p>בוחרים הצעה, פרטי הקשר נחשפים רק לנבחר, ובסיום מדרגים.</p></div></div></div>
 <noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
 <script src="/assets/market.js" defer></script>
 ''' % FORUM
