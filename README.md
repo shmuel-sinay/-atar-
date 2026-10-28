@@ -2,7 +2,7 @@
 
 אתר סטטי בעברית (HTML + CSS בלבד, בלי ספריות חיצוניות) + שרת קטן לטופס הפנייה.
 
-מבנה: `/` בית, `/services/`, `/android/`, `/shop/`, `/request/`, `/chat/`, `/contact/`.
+מבנה: `/` בית, `/services/`, `/android/`, `/shop/`, `/request/`, `/contact/`. `/chat/` הוא פרויקט נפרד (קהל אחר), לא מקושר מהאתר ולא נסרק.
 
 התקנה בשרת: `sudo bash server/deploy.sh https://github.com/USER/REPO.git`
 אחרי זה כל שינוי שנדחף ל-main מתעדכן באתר תוך דקה.
