@@ -117,22 +117,23 @@
     return box;
   }
 
-  var CSTAT = { pending: "ממתין לאישור", approved: "אושר", paid: "שולם", rejected: "נדחה" };
   function partnerBox() {
     var box = el("section", { cls: "card mk-sec" });
     api("GET", "partner").then(function (p) {
       if (!p.code) return;
       var link = location.origin + location.pathname + "?ref=" + p.code;
       var inp = el("input", { value: link, readOnly: true });
-      var cp = el("button", { cls: "btn ghost sm", type: "button", text: "העתקה" });
-      cp.addEventListener("click", function () { inp.select(); try { navigator.clipboard.writeText(link); } catch (e) {} cp.textContent = "הועתק"; });
-      box.appendChild(el("h3", { text: "תוכנית שותפים" }));
-      box.appendChild(el("p", { text: "מביאים מבקש חדש ללוח ומקבלים תגמול (" + p.reward + " " + p.unit + ") כשהעבודה הראשונה שלו מסתיימת. התגמול מאושר ידנית על ידי ההנהלה." }));
+      var cp = el("button", { cls: "btn primary", type: "button", text: "העתקת הקישור" });
+      cp.addEventListener("click", function () { copyText(link, cp); });
+      box.appendChild(el("h3", { text: "הקישור האישי שלך" }));
+      box.appendChild(el("p", { text: "משתפים את הקישור. כל מי שנרשם דרכו מזכה אותך מיד ב-" + p.reward + " " + p.unit + ", ואם הוא גם מזמין עבודה מקבלים בונוס של עוד " + p.bonus + " " + p.unit + "." }));
+      box.appendChild(el("div", { cls: "linkrow" }, [inp, cp]));
+      box.appendChild(el("div", { cls: "act" }, shareButtons("מקום לבקש עבודה ולקבל הצעות", "מקום לבקש עבודה, תוכנה או שירות ולקבל הצעות מאנשי מקצוע מאושרים:", link).slice(1)));
+      box.appendChild(el("div", { cls: "stats three" }, [
+        el("div", { cls: "stat" }, [el("b", { text: String(p.signups) }), el("span", { text: "נרשמו דרכך" })]),
+        el("div", { cls: "stat" }, [el("b", { text: String(p.orders) }), el("span", { text: "גם הזמינו עבודה" })]),
+        el("div", { cls: "stat" }, [el("b", { text: String(Math.round(p.total)) }), el("span", { text: p.unit + " שצברת" })])]));
       if (p.level) box.appendChild(el("p", { cls: "mk-ok", text: "הדרגה שלך: " + p.level }));
-      box.appendChild(el("div", { cls: "mk-bidform" }, [inp, cp]));
-      box.appendChild(el("div", { cls: "act" }, shareButtons("מקום לבקש עבודה ולקבל הצעות", "מקום לבקש עבודה, תוכנה או שירות ולקבל הצעות מאנשי מקצוע מאושרים:", link)));
-      box.appendChild(el("p", { cls: "meta", text: "נרשמו דרכך: " + p.referred + " · ממתין: " + p.totals.pending + " · אושר: " + p.totals.approved + " · שולם: " + p.totals.paid + " (" + p.unit + ")" }));
-      p.credits.forEach(function (c) { box.appendChild(el("div", { cls: "meta", text: c.amount + " " + p.unit + " · " + CSTAT[c.status] })); });
     });
     return box;
   }
@@ -353,7 +354,7 @@
   }
   function sideCta(cat) {
     if (!me) return el("div", { cls: "scard cta" }, [el("h3", { text: "צריך עבודה? יודע לעשות?" }),
-      el("p", { text: "מפרסמים בקשה ומקבלים הצעות מאנשי מקצוע מאושרים. כל הצטרפות ובקשה נבדקות ידנית." }),
+      el("p", { text: "מפרסמים בקשה ומקבלים הצעות מאנשי מקצוע מאושרים. כל בקשה וכל איש מקצוע נבדקים ידנית." }),
       linkBtn("הרשמה", "#/register", true), el("a", { cls: "btn ghost", href: "#/login", text: "התחברות" })]);
     if (me.role === "client") return el("div", { cls: "scard cta" }, [el("h3", { text: "בקשה חדשה" }),
       el("p", { text: "מתארים מה צריך, וההצעות מגיעות לכאן." }), linkBtn("פרסום בקשה", "#/new" + (cat ? "/" + cat : ""), true)]);
@@ -577,7 +578,7 @@
     clearInterval(badgeTimer);
     var hash = location.hash.replace(/^#\/?/, "").split("/")[0];
     document.querySelectorAll(".fbar nav a").forEach(function (a) {
-      var h = a.getAttribute("href"), on = h === "/market/#/pros" ? (hash === "pros" || hash === "pro") : h === "/market/" ? (location.pathname.indexOf("/market/rules") < 0 && hash !== "pros" && hash !== "pro") : false;
+      var h = a.getAttribute("href"), on = h === "/market/#/pros" ? (hash === "pros" || hash === "pro") : h === "/market/" ? (location.pathname.indexOf("/market/rules") < 0 && ["", "c", "r"].indexOf(hash) >= 0) : false;
       if (h.indexOf("/rules/") > 0) on = location.pathname.indexOf("/market/rules") === 0;
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });

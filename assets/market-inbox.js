@@ -24,7 +24,7 @@
     var reqs = d.requests.filter(function (r) { return r.status === "review"; });
     var pros = d.users.filter(function (u) { return u.role === "pro" && u.status === "pending"; });
     var photos = d.users.filter(function (u) { return u.role === "pro" && u.photo === 1; });
-    var credits = d.credits.filter(function (c) { return c.status === "pending"; });
+    var credits = [];
     var total = reqs.length + pros.length + photos.length + credits.length;
     box.hidden = false; box.textContent = "";
     var head = el("div", { cls: "act", style: "justify-content:space-between;margin:0" }, [el("strong", { text: total ? total + " דברים ממתינים לאישור שלך" : "אין כרגע דבר שממתין לאישור" }),

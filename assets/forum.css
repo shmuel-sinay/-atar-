@@ -300,3 +300,6 @@ section.panel[id^="p-"].on{display:block}
 .ucard .note{margin:4px 0}
 @media (max-width:900px){.side.first .cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.side.first .cta h3{margin:0;flex-basis:100%}.side.first .cta .btn{width:auto;flex:1;margin:0}}
 .pcard p{margin:0}
+.linkrow{display:flex;gap:8px;flex-wrap:wrap}
+.linkrow input{flex:1;min-width:220px;direction:ltr;text-align:left}
+.stats.three{grid-template-columns:repeat(3,1fr)}
