@@ -137,7 +137,7 @@
         });
       }
       rl.appendChild(el("div", { cls: "box" }, [el("strong", { text: r.title }),
-        el("div", { cls: "meta", text: (r.via_admin ? "מטעם כושר טק · " : "") + STAT[r.status] + " · " + (CATMAP[r.category] || "") + " · הצעות: " + r.bids_count + " · לקוח: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }),
+        el("div", { cls: "meta", text: (r.via_admin ? "מטעם כשר טק · " : "") + STAT[r.status] + " · " + (CATMAP[r.category] || "") + " · הצעות: " + r.bids_count + " · לקוח: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }),
         el("p", { cls: "msg", text: r.desc }), bidsBox, acts]));
     });
     if (!data.requests.length) rl.appendChild(el("p", { cls: "meta", text: "אין בקשות." }));
