@@ -139,6 +139,12 @@ home += f'''
 </div></section>
 
 <section class="block alt"><div class="wrap">
+  <h2 class="title">נגן אנדרואיד: יותר מנגן, פחות מסמארטפון</h2>
+  <p class="sub">כמו פלאפון כשר, רק בלי שיחות ועם מסך מגע: שיעורים, שירים, ספרי קודש, מפות וכלים שימושיים. הכול בלי אינטרנט ובלי סרטים, ורק מה שבחרת.</p>
+  <a class="btn primary" href="/shop/">לנגנים ולעזרה בבחירה</a>
+</div></section>
+
+<section class="block"><div class="wrap">
   <h2 class="title">איך זה עובד</h2>
   <p class="sub">שלושה צעדים, בלי סיבוכים.</p>
   <ol class="steps">
@@ -192,6 +198,15 @@ a += card("bolt","רוט ועריכת המערכת","גישה לליבת המע�
 a += card("phone","קושחה ייעודית","בונים למכשיר מערכת משלו, נקייה וסגורה כבר מההתחלה.",["מערכת שנבנתה מחדש","קובץ מוכן לצריבה","מתאים להכשרת כמה מכשירים זהים"],price="לפי דגם")
 a += '''</div></div></section>
 <section class="block alt"><div class="wrap">
+<h2 class="title">למה טכנאי רגיל לא עושה את זה?</h2>
+<div class="grid c2 whyc">
+<article class="card"><h3>כל מכשיר שונה</h3><p>אין "כפתור הכשרה". כל דגם בנוי אחרת, ומה שעובד באחד שובר את השני. צריך להכיר את המכשיר מבפנים.</p></article>
+<article class="card"><h3>להסיר, לא רק לחסום</h3><p>חסימה רגילה אפשר לעקוף. כדי שהאינטרנט באמת לא יהיה, מוציאים אותו מתוך המערכת, בלי לפגוע בשמע, בבלוטות' ובשאר הדברים.</p></article>
+<article class="card"><h3>כל תוכנה נבדקת</h3><p>תוכנה שנראית תמימה יכולה לפתוח דלת לאינטרנט או לסרטים. לכן כל דבר נבדק על הנגן עצמו לפני שהוא נכנס.</p></article>
+<article class="card"><h3>עבודה קטנה, מחיר קטן</h3><p>אצל טכנאי רגיל זה לא שווה את הזמן שלו, ולכן או שהוא לא יעשה, או שיגבה הרבה. אצלנו זו ההתמחות, ולכן זה מהיר וזול.</p></article>
+</div>
+</div></section>
+<section class="block"><div class="wrap">
 <h2 class="title">מה אפשר לעשות במכשיר</h2>
 <p class="sub">מכשירי אנדרואיד ונגנים מוכשרים אצלנו בלי אינטרנט. מכאן, אפשר לבנות כמעט כל שילוב:</p>
 <ul class="feat">
@@ -225,6 +240,12 @@ sh = head("חנות נגנים | כושר טק: נגני אנדרואיד מוכ
 sh += '''<section class="pagehead"><div class="wrap"><h1>הקו השמור</h1><p>נגני אנדרואיד שנבחרו בקפידה ומגיעים מוכשרים ומוכנים לשימוש. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו.</p></div></section>
 <section class="block"><div class="wrap">
 <div class="guard"><strong>בכל הנגנים שלנו:</strong> בלי אינטרנט ובלי שום אפשרות להכניס סרטים. זה לא תוסף, זה הבסיס.</div>
+<div class="intro2">
+<div><h2 class="title">מה זה נגן אנדרואיד?</h2>
+<p>תחשוב על פלאפון כשר, רק בלי שיחות ועם מסך מגע גדול ונוח. שומעים בו שיעורים ושירים, מקליטים, ויכולים להיות בו גם ספרי קודש, מפות, מחשבון ועוד הרבה דברים שימושיים. הכול עובד בלי אינטרנט.</p>
+<p>ההבדל בין נגן טוב לנגן מסוכן הוא איך הכשירו אותו. אצלנו האינטרנט מוסר מתוך המערכת עצמה, כל תוכנה נבדקת על הנגן לפני שהיא נכנסת, ואתה בוחר בדיוק מה יהיה בו.</p></div>
+<ul class="pros"><li><strong>בלי אינטרנט</strong>, מוסר מבפנים ולא רק חסום</li><li><strong>בלי סרטים</strong>, ובלי דרך להכניס אותם</li><li><strong>רק מה שבחרת</strong>, וכל דבר נבדק על הנגן</li><li><strong>אפשר לשנות</strong> אחר כך, אם תצטרך</li></ul>
+</div>
 <div id="quiz" class="quiz"></div>
 <h2 class="title">שלוש רמות הכשרה</h2>
 <p class="sub">כל נגן בחנות אפשר להזמין בכל אחת מהרמות. בוחרים לפי הצורך, מהשמורה ביותר.</p>
@@ -233,6 +254,9 @@ sh += '''<section class="pagehead"><div class="wrap"><h1>הקו השמור</h1><
 <article class="card tier"><span class="tnum">2</span><h3>שמור עם חנות פנימית</h3><p>כל הבסיס, ובנוסף חנות פנימית נרחבת של אפליקציות שנבדקו ואושרו.</p><ul><li>מבחר רחב של אפליקציות מאושרות</li><li>מתקינים רק מתוך החנות הפנימית</li><li>בלי התקנה מבחוץ</li></ul></article>
 <article class="card tier"><span class="tnum">3</span><h3>עם התקנה מבחוץ</h3><p>לשימוש מתקדם: אפשר להתקין אפליקציות גם מבחוץ.</p><ul><li>התקנת קבצי אפליקציה מבחוץ</li><li>עדיין בלי אינטרנט</li><li>עדיין בלי סרטים</li></ul></article>
 </div>
+<h2 class="title" style="margin-top:44px">מה אפשר שיהיה בנגן</h2>
+<p class="sub">דוגמאות למה שאפשר להכניס. כל דבר נבדק אצלנו על הנגן עצמו לפני שהוא נכנס.</p>
+<div class="grid c3 catgrid" id="catalog"></div>
 <h2 class="title" style="margin-top:44px">הנגנים</h2>
 <div class="grid c2" id="products"></div>
 <div class="note" style="margin-top:24px">התשלום אינו מתבצע באתר. אחרי יצירת קשר נתאם הכול ישירות.</div></div></section>
@@ -443,7 +467,7 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
 <script>
 (function(){{
   var f=document.getElementById('cf'),m=document.getElementById('formmsg');
-  try{{var pr=new URLSearchParams(location.search).get('product');if(pr){{pr=pr.slice(0,60);var o=document.createElement('option');o.value='הזמנה: '+pr;o.textContent='הזמנה: '+pr;f.subject.insertBefore(o,f.subject.firstChild);f.subject.selectedIndex=0;if(!f.message.value)f.message.value='אני מעוניין ב'+pr+'. ';}}}}catch(e){{}}
+  try{{var pr=new URLSearchParams(location.search).get('product');if(pr){{pr=pr.slice(0,60);var o=document.createElement('option');o.value='הזמנה: '+pr;o.textContent='הזמנה: '+pr;f.subject.insertBefore(o,f.subject.firstChild);f.subject.selectedIndex=0;if(!f.message.value)f.message.value='אני מעוניין: '+pr+'. ';}}var dt=new URLSearchParams(location.search).get('details');if(dt)f.message.value=(f.message.value+'\\n'+dt.slice(0,1200)).trim()+'\\n';}}catch(e){{}}
   try{{var q=new URLSearchParams(location.search).get('subject');if(q){{for(var i=0;i<f.subject.options.length;i++){{if(f.subject.options[i].value===q||f.subject.options[i].text===q){{f.subject.selectedIndex=i}}}}}}}}catch(e){{}}
   f.addEventListener('submit',function(e){{
     e.preventDefault();
