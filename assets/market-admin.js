@@ -1,4 +1,27 @@
 (function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function showLogin() { $("app").hidden = true; $("login").hidden = false; $("pw").focus(); }
+  function showApp() { $("login").hidden = true; $("app").hidden = false; }
+  document.querySelectorAll(".tabs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".tabs button").forEach(function (x) { x.className = x === b ? "on" : ""; });
+      document.querySelectorAll(".panel").forEach(function (p) { p.classList.toggle("on", p.id === "p-" + b.dataset.tab); });
+    });
+  });
+  function login() {
+    $("loginmsg").textContent = "";
+    fetch("/api/m/admin/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("pw").value }) })
+      .then(function (r) {
+        if (r.ok) { $("pw").value = ""; showApp(); }
+        else $("loginmsg").textContent = r.status === 429 ? "יותר מדי ניסיונות, נסה שוב מאוחר יותר." : r.status === 503 ? "הניהול לא מוגדר בשרת." : "סיסמה שגויה.";
+      }).catch(function () { $("loginmsg").textContent = "אין חיבור לשרת."; });
+  }
+  $("go").addEventListener("click", login);
+  $("pw").addEventListener("keydown", function (e) { if (e.key === "Enter") login(); });
+  $("out").addEventListener("click", function () { fetch("/api/m/admin/logout", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" }).then(showLogin); });
+  fetch("/api/m/admin/me", { credentials: "same-origin" }).then(function (r) { r.ok ? showApp() : showLogin(); }).catch(showLogin);
+})();
+(function () {
   var data = null;
   var STAT = { review: "ממתינה לאישור", open: "פתוחה", taken: "נלקחה", done: "בוצעה", closed: "סגורה" };
   var ROLE = { client: "מבקש", pro: "איש מקצוע / חברה" };

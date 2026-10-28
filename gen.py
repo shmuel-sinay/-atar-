@@ -218,6 +218,26 @@ mk += '''<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען
 mk += ffoot()
 write("/market/", mk)
 
+# ---------- BOARD ADMIN (separate from the business admin) ----------
+ma = fhead("ניהול | " + FORUM, "/market/admin/")
+ma += '''<div id="login" class="box" hidden style="max-width:360px;margin:8vh auto"><h1 style="margin:0 0 10px;font-size:1.3rem">ניהול הלוח</h1>
+<label class="f">סיסמה<input type="password" id="pw" autocomplete="current-password"></label>
+<button class="btn primary" id="go" type="button" style="margin-top:10px;width:100%">כניסה</button><div id="loginmsg" role="status" class="meta" style="margin-top:8px"></div></div>
+<div id="app" hidden>
+<div class="ptitle"><h1>ניהול הלוח</h1><button class="btn sm" id="out" type="button">יציאה</button></div>
+<nav class="tabs" role="tablist">
+<button data-tab="users" class="on">משתמשים <span id="ucount"></span></button><button data-tab="mreq">בקשות <span id="rcount"></span></button>
+<button data-tab="partners">שותפים <span id="pcount"></span></button><button data-tab="est">הערכת מחיר</button></nav>
+<section class="panel on" id="p-users"><div id="ulist"></div></section>
+<section class="panel" id="p-mreq"><div id="rlist"></div></section>
+<section class="panel" id="p-partners"><div id="clist"></div></section>
+<section class="panel" id="p-est"><div id="elist"></div><div class="act"><button class="btn primary" id="saveest" type="button">שמירה</button></div></section>
+</div><div id="status" role="status" aria-live="polite"></div>
+<script src="@@JS@@"></script>
+'''.replace("@@JS@@", V("assets/market-admin.js"))
+ma += ffoot()
+write("/market/admin/", ma)
+
 # ---------- RULES ----------
 RULES = [
  ("1. כללי", [

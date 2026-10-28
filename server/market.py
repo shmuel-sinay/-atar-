@@ -136,6 +136,29 @@ def ensure_code(c, u):
     return code
 
 
+def admin_pass():
+    return os.environ.get("KT_MARKET_ADMIN_PASS") or os.environ.get("KT_ADMIN_PASS", "")
+
+
+def admin_token():
+    exp = int(time.time()) + 12 * 3600
+    return "%d.%s" % (exp, hmac.new(SECRET, ("madmin%d" % exp).encode(), hashlib.sha256).hexdigest())
+
+
+def admin_ok(h):
+    for part in (h.headers.get("Cookie") or "").split(";"):
+        k, _, v = part.strip().partition("=")
+        if k != "kt_madmin":
+            continue
+        try:
+            exp, sig = v.split(".")
+            good = hmac.new(SECRET, ("madmin%s" % exp).encode(), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(sig, good) and int(exp) > time.time()
+        except Exception:
+            return False
+    return False
+
+
 def make_session(uid):
     exp = int(time.time()) + SESSION
     sig = hmac.new(SECRET, ("m%d.%d" % (uid, exp)).encode(), hashlib.sha256).hexdigest()
@@ -297,6 +320,19 @@ def route(h, method, path):
             res = [pro_card(r, {"id": r["id"], "name": r["name"]}, c) for r in rows]
         res.sort(key=lambda x: (-(x["rating"] or 0), -LEVEL_RANK.get(x["level"], 1)))
         return h.reply(200, res)
+    if sub == "admin/login" and method == "POST":
+        if not admin_pass():
+            return h.reply(503, {"error": "admin disabled"})
+        if limited("madm" + h.ip(), 10, 900):
+            return h.reply(429, {"error": "slow down"})
+        if not hmac.compare_digest(clip(d.get("password"), 200).encode(), admin_pass().encode()):
+            time.sleep(1)
+            return h.reply(401, {"error": "wrong"})
+        return h.reply(200, {"ok": True}, {"Set-Cookie": "kt_madmin=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=Strict" % (admin_token(), 12 * 3600)})
+    if sub == "admin/logout" and method == "POST":
+        return h.reply(200, {"ok": True}, {"Set-Cookie": "kt_madmin=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"})
+    if sub == "admin/me" and method == "GET":
+        return h.reply(200 if admin_ok(h) or h.authed() else 401, {"ok": admin_ok(h) or h.authed()})
     if method == "GET" and sub == "categories":
         live = "status IN ('open','taken','done')"
         with db() as c:
@@ -626,6 +662,8 @@ def chat_routes(h, method, sub, d, u):
 
 # ---------------------------------------------------------------- admin API
 def admin(h, method, path):
+    if not (admin_ok(h) or h.authed()):
+        return h.reply(401, {"error": "login"})
     try:
         return admin_route(h, method, path[len("/api/admin/m/"):])
     except ValueError:
