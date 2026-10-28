@@ -159,7 +159,7 @@ sh += foot()
 write("/shop/", sh)
 
 # ---------- FORUM (separate look, not part of the business site) ----------
-FORUM = "לוח עבודות"
+FORUM = "מלאכת מחשבת"
 
 def fhead(title, path):
     return f'''<!doctype html>

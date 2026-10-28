@@ -140,7 +140,7 @@
 
   // ---------- auth forms
   function authView() {
-    var wrap = el("div", { cls: "mk-grid" });
+    var wrap = el("div", { cls: "mk-auth" });
     var lm = msgBox();
     var le = el("input", { type: "email", autocomplete: "email" }), lp = el("input", { type: "password", autocomplete: "current-password" });
     var lb = el("button", { cls: "btn primary", type: "button", text: "כניסה" });
@@ -151,7 +151,7 @@
         lm.textContent = r.__status === 429 ? "יותר מדי ניסיונות, נסה שוב מאוחר יותר." : "אימייל או סיסמה שגויים.";
       });
     });
-    wrap.appendChild(section("כניסה", [field("אימייל", le), field("סיסמה", lp), lb, lm]));
+    var loginSec = section("התחברות", [field("אימייל", le), field("סיסמה", lp), lb, lm]);
 
     function regForm(role) {
       var m = msgBox(), name = el("input", { autocomplete: "name" }), email = el("input", { type: "email", autocomplete: "email" }),
@@ -179,8 +179,23 @@
       kids.push(el("strong", { text: "כללי הלוח" }), box, hint, ag, b, m);
       return section(role === "client" ? "הרשמה: מבקש עבודה" : "הרשמה: איש מקצוע או חברה", kids);
     }
-    wrap.appendChild(regForm("client"));
-    wrap.appendChild(regForm("pro"));
+    var tabs = el("div", { cls: "mk-tabs" }), holder = el("div"), mode = "login", role = "client";
+    function btnTab(label, active, fn) {
+      var b = el("button", { type: "button", cls: active ? "on" : "", text: label }); b.addEventListener("click", fn); return b;
+    }
+    function draw() {
+      tabs.textContent = ""; holder.textContent = "";
+      tabs.appendChild(btnTab("התחברות", mode === "login", function () { mode = "login"; draw(); }));
+      tabs.appendChild(btnTab("הרשמה", mode === "reg", function () { mode = "reg"; draw(); }));
+      if (mode === "login") { holder.appendChild(loginSec); return; }
+      var pick = el("div", { cls: "mk-tabs sub" });
+      pick.appendChild(el("span", { cls: "meta", text: "נרשמים בתור:" }));
+      pick.appendChild(btnTab("מבקש עבודה", role === "client", function () { role = "client"; draw(); }));
+      pick.appendChild(btnTab("איש מקצוע או חברה", role === "pro", function () { role = "pro"; draw(); }));
+      holder.appendChild(pick);
+      holder.appendChild(regForm(role));
+    }
+    wrap.appendChild(tabs); wrap.appendChild(holder); draw();
     return wrap;
   }
 
