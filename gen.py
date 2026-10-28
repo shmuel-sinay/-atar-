@@ -192,7 +192,7 @@ def fhead(title, path):
 
 def ffoot():
     return '''</div></main>
-<footer class="ffoot"><div class="fwrap">הלוח פועל באישור ידני של ההנהלה · <a href="/contact/">פנייה להנהלה</a></div></footer>
+<footer class="ffoot"><div class="fwrap">הלוח פועל באישור ידני של ההנהלה · <a href="/market/#/contact">צור קשר עם ההנהלה</a></div></footer>
 </body></html>
 '''
 
@@ -228,10 +228,11 @@ ma += '''<div id="login" class="box" hidden style="max-width:360px;margin:8vh au
 <section id="boardbox" class="box" hidden></section>
 <nav class="tabs" role="tablist">
 <button data-tab="users" class="on">משתמשים <span id="ucount"></span></button><button data-tab="mreq">בקשות <span id="rcount"></span></button>
-<button data-tab="partners">שותפים <span id="pcount"></span></button><button data-tab="est">הערכת מחיר</button></nav>
+<button data-tab="partners">שותפים <span id="pcount"></span></button><button data-tab="est">הגדרות</button><button data-tab="contact">פניות <span id="kcount"></span></button></nav>
 <section class="panel on" id="p-users"><div id="ulist"></div></section>
 <section class="panel" id="p-mreq"><div id="rlist"></div></section>
 <section class="panel" id="p-partners"><div id="clist"></div></section>
+<section class="panel" id="p-contact"><div id="klist"></div></section>
 <section class="panel" id="p-est"><div id="elist"></div><div class="act"><button class="btn primary" id="saveest" type="button">שמירה</button></div></section>
 </div><div id="status" role="status" aria-live="polite"></div>
 <script src="@@JS@@"></script>

@@ -25,16 +25,17 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.__status = r.status; return j; }); });
   }
   function field(label, input) { return el("label", { cls: "mf" }, [el("span", { text: label }), input]); }
-  function select(map, value, any) {
+  function select(map, value, any, mapDisplay) {
     var s = el("select");
     if (any) s.appendChild(el("option", { value: "any", text: any }));
-    Object.keys(map).forEach(function (k) { var o = el("option", { value: k, text: map[k] }); if (k === value) o.selected = true; s.appendChild(o); });
+    Object.keys(map).forEach(function (k) { var o = el("option", { value: k, text: (mapDisplay || map)[k] }); if (k === value) o.selected = true; s.appendChild(o); });
     return s;
   }
+  function levelShort(l) { return l === "any" ? "כל רמה" : (meta.levels[l] || "").split(" (")[0]; }
   function msgBox() { return el("div", { cls: "mmsg", role: "status" }); }
   function stars(p) { return p.rating ? " · דירוג " + p.rating + (p.ratings ? " (" + p.ratings + ")" : "") : ""; }
   function proLine(p) {
-    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "").split(":")[0] + stars(p) + (p.founding ? " · חבר מייסד" : "") + (p.ambassador ? " · " + p.ambassador : "");
+    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + levelShort(p.level) + stars(p) + (p.ambassador ? " · " + p.ambassador : "");
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   var drawer = null, pulling = null;
@@ -178,16 +179,7 @@
       a.style.display = "block"; return a;
     });
   }
-  function rangeText(e) { return e ? "הערכה: " + e.lo + "–" + e.hi + " ש\"ח (הערכה בלבד)" : ""; }
 
-  function estimateBox(getVals) {
-    var out = el("div", { cls: "mk-est" });
-    function upd() {
-      var v = getVals();
-      api("POST", "estimate", v).then(function (e) { out.textContent = e.lo != null ? rangeText(e) : ""; });
-    }
-    return { node: out, update: upd };
-  }
 
   function authView(startMode) {
     var wrap = el("div", { cls: "mk-auth" });
@@ -315,7 +307,6 @@
   function isProActive() { return me && me.role === "pro" && me.status === "active"; }
   function chip(text, cls) { return el("span", { cls: "chip " + (cls || ""), text: text }); }
   function statusChip(s) { return chip(STATUS[s] || s, "st-" + s); }
-  function levelShort(l) { return l === "any" ? "כל רמה" : (meta.levels[l] || "").split(":")[0]; }
   function crumbs(parts) {
     var box = el("div", { cls: "crumbs" });
     parts.forEach(function (p, i) {
@@ -399,7 +390,7 @@
             r.tagged ? chip("מתויג: " + r.tagged.name + (r.tagged.only ? " (פרטי)" : ""), "tag") : null,
             r.via_admin ? chip("מטעם ההנהלה", "tag") : null]),
           el("p", { cls: "sub", text: (r.author ? "פורסם על ידי " + r.author + " · " : "") + ago(r.created) + (r.budget ? " · תקציב: " + r.budget : "") }),
-          el("p", { cls: "body", text: r.desc }), r.estimate ? el("p", { cls: "sub", text: rangeText(r.estimate) }) : null]);
+          el("p", { cls: "body", text: r.desc })]);
         holder.appendChild(main);
 
         if (r.viewer === "guest" && !me) {
@@ -503,10 +494,7 @@
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
     var m = msgBox(), tag = el("select"), only = el("input", { type: "checkbox" });
     tag.appendChild(el("option", { value: "", text: "ללא (פתוחה לכל אנשי המקצוע)" }));
-    api("GET", "pros").then(function (rows) { (Array.isArray(rows) ? rows : []).forEach(function (p) { tag.appendChild(el("option", { value: p.id, text: p.name + " · " + (meta.levels[p.level] || "").split(":")[0] })); }); });
-    var est = estimateBox(function () { return { category: cat.value, level: lvl.value === "any" ? "basic" : lvl.value, size: size.value }; });
-    [cat, lvl, size].forEach(function (s) { s.addEventListener("change", est.update); });
-    est.update();
+    api("GET", "pros").then(function (rows) { (Array.isArray(rows) ? rows : []).forEach(function (p) { tag.appendChild(el("option", { value: p.id, text: p.name + " · " + levelShort(p.level) })); }); });
     var b = el("button", { cls: "btn primary", type: "button", text: "פרסום הבקשה" });
     b.addEventListener("click", function () {
       m.textContent = "";
@@ -519,7 +507,7 @@
     root.appendChild(el("div", { cls: "formcard" }, [el("h1", { text: "בקשה חדשה" }), el("p", { cls: "sub", text: "תאר מה צריך. הבקשה תופיע בלוח לאחר אישור ההנהלה, ופרטי הקשר שלך יימסרו רק למי שתבחר." }),
       field("כותרת", title), field("מה צריך", desc), el("div", { cls: "two" }, [field("תחום", cat), field("רמה רצויה (משפיעה על המחיר)", lvl)]),
       el("div", { cls: "two" }, [field("גודל העבודה", size), field("תקציב", budget)]), field("איך ליצור קשר", contact), field("תיוג מפתח מסוים", tag),
-      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m]));
+      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), b, m]));
   }
 
   // ---- account pages
@@ -568,6 +556,34 @@
     poll(); badgeTimer = setInterval(poll, 20000);
   }
 
+  function contactAdminPage() {
+    var name = el("input", { placeholder: "שמך" });
+    var contact = el("input", { placeholder: "טלפון או מייל" });
+    var subject = el("input", { placeholder: "נושא" });
+    var msg = el("textarea", { placeholder: "הודעה", rows: 6 });
+    var btn = el("button", { cls: "btn primary", type: "button", text: "שליחה" });
+    var status = el("div", { cls: "mmsg", role: "status" });
+    btn.addEventListener("click", function () {
+      var n = name.value.trim(), c = contact.value.trim(), s = subject.value.trim(), m = msg.value.trim();
+      if (!n || !c || !m) { status.textContent = "נא למלא שם, דרך קשר והודעה."; return; }
+      api("POST", "contact-admin", { name: n, contact: c, subject: s, message: m }).then(function (r) {
+        if (r.__status === 200) { status.textContent = "הודעתך נשלחה. תודה!"; name.value = ""; contact.value = ""; subject.value = ""; msg.value = ""; }
+        else status.textContent = r.__status === 429 ? "כבר נשלחו כמה פניות. אפשר לנסות שוב בעוד שעה." : "השליחה נכשלה, נסה שוב.";
+      });
+    });
+    var box = el("section", { cls: "card mk-sec" }, [
+      el("h2", { text: "צור קשר עם ההנהלה" }),
+      el("label", { cls: "mf" }, [el("span", { text: "שם" }), name]),
+      el("label", { cls: "mf" }, [el("span", { text: "טלפון או מייל" }), contact]),
+      el("label", { cls: "mf" }, [el("span", { text: "נושא (אופציונלי)" }), subject]),
+      el("label", { cls: "mf" }, [el("span", { text: "הודעה" }), msg]),
+      el("div", { cls: "act" }, [btn]),
+      status
+    ]);
+    root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "צור קשר עם ההנהלה" }]));
+    root.appendChild(box);
+  }
+
   // ---- router
   function route() {
     closeChat();
@@ -577,6 +593,7 @@
     var needLogin = ["requests", "new", "mine", "messages", "profile", "partners"];
     if (!me && needLogin.indexOf(p0) >= 0) return root.appendChild(authView("login"));
     if (p0 === "login" || p0 === "register") return me ? go("") : root.appendChild(authView(p0 === "register" ? "reg" : "login"));
+    if (p0 === "contact") return contactAdminPage();
     if (p0 === "c") return feedPage(meta.cats[parts[1]] ? parts[1] : "");
     if (p0 === "r") return requestPage(parts[1]);
     if (p0 === "new") return newRequestPage(parts[1]);

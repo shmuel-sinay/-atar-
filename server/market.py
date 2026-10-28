@@ -15,7 +15,7 @@ lock = threading.Lock()
 hits = {}
 
 LEVEL_RANK = {"basic": 1, "pro": 2, "secure": 3}
-LEVELS = {"basic": "בסיסי: ללא בדיקות אבטחה, המחיר הנמוך ביותר", "pro": "מקצועי: מחיר בינוני", "secure": "מתקדם: מומחים וכולל בדיקות אבטחה, המחיר הגבוה ביותר"}
+LEVELS = {"basic": "בסיסי (ללא בדיקות אבטחה)", "pro": "מתקדם", "secure": "מקצועי (מפתח ברמה גבוהה, כולל בדיקות אבטחה)"}
 CATS = {"software": "תוכנה וכלים", "website": "אתר", "device": "התאמת מכשיר או מחשב", "design": "עיצוב",
         "writing": "כתיבה ועריכה", "help": "הדרכה ועזרה טכנית", "other": "אחר"}
 SIZES = {"small": "קטנה", "medium": "בינונית", "large": "גדולה"}
@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "reward": {"amount": 30.0},
 }
 UNIT = "קרדיטים"
+DUMMY_PW = "00" * 16 + ":" + "00" * 32
 STATUS_REQ = ("review", "open", "taken", "done", "closed")
 
 
@@ -55,6 +56,8 @@ def init(secret, directory):
         CREATE INDEX IF NOT EXISTS chat_msgs_chat ON chat_msgs(chat_id, id);
         CREATE TABLE IF NOT EXISTS credits(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, referred_id INTEGER NOT NULL,
           request_id INTEGER NOT NULL UNIQUE, amount REAL NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS contact(id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, contact TEXT, subject TEXT,
+          message TEXT, done INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS ratings(request_id INTEGER PRIMARY KEY, pro_id INTEGER NOT NULL, stars INTEGER NOT NULL,
           text TEXT, created INTEGER NOT NULL);
         """)
@@ -112,6 +115,7 @@ def hash_pw(pw):
 
 
 def check_pw(pw, stored):
+    pw = pw[:200]
     try:
         salt, h = stored.split(":")
         got = hashlib.scrypt(pw.encode(), salt=bytes.fromhex(salt), n=2 ** 14, r=8, p=1, dklen=32)
@@ -272,10 +276,11 @@ def drop_photo(uid):
 def save_photo(h, u, d):
     import base64
     try:
-        raw = base64.b64decode(str(d.get("data") or "").split(",")[-1], validate=False)
+        raw = base64.b64decode(str(d.get("data") or "").split(",")[-1], validate=True)
     except Exception:
         return h.reply(400, {"error": "bad"})
-    if len(raw) < 200 or len(raw) > 500000 or raw[:3] != b"\xff\xd8\xff":
+    # the browser re-encodes every photo to JPEG; anything else is refused (served back only as image/jpeg + nosniff)
+    if len(raw) < 200 or len(raw) > 500000 or raw[:3] != b"\xff\xd8\xff" or raw[-2:] != b"\xff\xd9":
         return h.reply(400, {"error": "type"})
     with open(photo_path(u["id"]), "wb") as f:
         f.write(raw)
@@ -294,6 +299,24 @@ def clean_links(text):
 
 
 # ---------------------------------------------------------------- public API
+def contact_admin(h, d):
+    if limited("contact_" + h.ip(), 3, 3600):
+        return h.reply(429, {"error": "slow down"})
+    name = clip(d.get("name"), 100)
+    contact = clip(d.get("contact"), 100)
+    subject = clip(d.get("subject"), 200)
+    message = clip(d.get("message"), 5000)
+    if not name or not contact or not message:
+        return h.reply(400, {"error": "fields"})
+    u = session_user(h)
+    with db() as c:
+        if c.execute("SELECT COUNT(*) FROM contact WHERE done=0").fetchone()[0] > 500:
+            return h.reply(429, {"error": "slow down"})
+        c.execute("INSERT INTO contact(user_id,name,contact,subject,message,created) VALUES(?,?,?,?,?,?)",
+                  (u["id"] if u else None, name, contact, subject, message, int(time.time())))
+    return h.reply(200, {"ok": True})
+
+
 def handle(h, method, path):
     try:
         return route(h, method, path)
@@ -351,6 +374,8 @@ def route(h, method, path):
         return login(h, d)
     if method == "POST" and sub == "logout":
         return h.reply(200, {"ok": True}, {"Set-Cookie": "kt_user=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"})
+    if method == "POST" and sub == "contact-admin":
+        return contact_admin(h, d)
     u = session_user(h)
     if method == "GET" and sub.startswith("photo/"):
         return serve_photo(h, sub[6:], u)
@@ -428,7 +453,8 @@ def login(h, d):
     email = clip(d.get("email"), 120).lower()
     with db() as c:
         u = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    if not u or u["status"] == "blocked" or not check_pw(str(d.get("password") or ""), u["pw"]):
+    good = check_pw(str(d.get("password") or ""), u["pw"] if u else DUMMY_PW)
+    if not u or u["status"] == "blocked" or not good:
         time.sleep(0.7)
         return h.reply(401, {"error": "wrong"})
     return h.reply(200, {"ok": True}, {"Set-Cookie": cookie_for(u["id"])})
@@ -462,8 +488,6 @@ def feed_row(c, r, u):
          "chats": c.execute("SELECT COUNT(*) FROM chats WHERE request_id=?", (r["id"],)).fetchone()[0],
          "mine": u is not None and u["id"] == r["user_id"], "for_me": u is not None and r["tagged_pro"] == u["id"],
          "tagged": bool(r["tagged_pro"])}
-    if r["size"] and r["category"] in CATS:
-        o["estimate"] = estimate(r["category"], r["level"] if r["level"] in LEVEL_RANK else "basic", r["size"])
     return o
 
 
@@ -532,8 +556,6 @@ def req_out(c, r, with_bids, viewer_id=None):
     if r["tagged_pro"]:
         t = c.execute("SELECT name FROM users WHERE id=?", (r["tagged_pro"],)).fetchone()
         o["tagged"] = {"id": r["tagged_pro"], "name": t["name"] if t else "", "only": bool(r["only_tagged"])}
-    if r["size"] and r["category"] in CATS:
-        o["estimate"] = estimate(r["category"], r["level"] if r["level"] in LEVEL_RANK else "basic", r["size"])
     if with_bids:
         bids = []
         for b in c.execute("SELECT * FROM bids WHERE request_id=? ORDER BY created", (r["id"],)).fetchall():
@@ -733,9 +755,10 @@ def chat_routes(h, method, sub, d, u):
             ch = c.execute("SELECT id FROM chats WHERE request_id=? AND pro_id=?", (rid, pid)).fetchone()
             return h.reply(200, {"id": ch["id"]})
         if method == "GET" and sub == "chats":
-            col = "client_id" if u["role"] == "client" else "pro_id"
+            q = ("SELECT * FROM chats WHERE client_id=? ORDER BY id DESC LIMIT 100" if u["role"] == "client"
+                 else "SELECT * FROM chats WHERE pro_id=? ORDER BY id DESC LIMIT 100")
             out = []
-            for ch in c.execute("SELECT * FROM chats WHERE %s=? ORDER BY id DESC LIMIT 100" % col, (u["id"],)).fetchall():
+            for ch in c.execute(q, (u["id"],)).fetchall():
                 other = ch["pro_id"] if u["role"] == "client" else ch["client_id"]
                 ou = c.execute("SELECT name FROM users WHERE id=?", (other,)).fetchone()
                 op = c.execute("SELECT photo FROM pros WHERE user_id=?", (other,)).fetchone()
@@ -757,18 +780,18 @@ def chat_routes(h, method, sub, d, u):
                     after = 0
                 rows = c.execute("SELECT id, sender_id, text, created FROM chat_msgs WHERE chat_id=? AND id>? ORDER BY id LIMIT 200", (ch["id"], after)).fetchall()
                 if rows:
-                    col = "client_read" if u["id"] == ch["client_id"] else "pro_read"
-                    c.execute("UPDATE chats SET %s=MAX(%s,?) WHERE id=?" % (col, col), (rows[-1]["id"], ch["id"]))
+                    c.execute("UPDATE chats SET client_read=MAX(client_read,?) WHERE id=?" if u["id"] == ch["client_id"]
+                              else "UPDATE chats SET pro_read=MAX(pro_read,?) WHERE id=?", (rows[-1]["id"], ch["id"]))
                 return h.reply(200, [{"id": m["id"], "mine": m["sender_id"] == u["id"], "text": m["text"], "at": m["created"]} for m in rows])
             if method == "POST" and parts[2] == "send":
                 text = clip(d.get("text"), 1000)
                 if not text:
                     return h.reply(400, {"error": "empty"})
-                if limited("chat%d" % u["id"], 90, 3600):
+                if limited("chat%d" % u["id"], 60, 3600):
                     return h.reply(429, {"error": "slow down"})
                 cur = c.execute("INSERT INTO chat_msgs(chat_id,sender_id,text,created) VALUES(?,?,?,?)", (ch["id"], u["id"], text, int(time.time())))
-                col = "client_read" if u["id"] == ch["client_id"] else "pro_read"
-                c.execute("UPDATE chats SET %s=? WHERE id=?" % col, (cur.lastrowid, ch["id"]))
+                c.execute("UPDATE chats SET client_read=? WHERE id=?" if u["id"] == ch["client_id"]
+                          else "UPDATE chats SET pro_read=? WHERE id=?", (cur.lastrowid, ch["id"]))
                 return h.reply(200, {"ok": True, "id": cur.lastrowid})
     return h.reply(404, {"error": "not found"})
 
@@ -793,6 +816,15 @@ def admin_route(h, method, sub):
         except ValueError:
             return h.reply(404, {"error": "not found"})
     with db() as c:
+        if method == "GET" and sub == "contact":
+            rows = c.execute("SELECT * FROM contact ORDER BY done, id DESC LIMIT 300").fetchall()
+            return h.reply(200, [dict(r) for r in rows])
+        if method == "POST" and sub == "contact/done":
+            c.execute("UPDATE contact SET done=1-done WHERE id=?", (int(d.get("id") or 0),))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "contact/delete":
+            c.execute("DELETE FROM contact WHERE id=?", (int(d.get("id") or 0),))
+            return h.reply(200, {"ok": True})
         if method == "GET" and sub == "overview":
             users = []
             for u in c.execute("SELECT * FROM users ORDER BY id DESC").fetchall():
