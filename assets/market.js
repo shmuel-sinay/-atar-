@@ -339,7 +339,15 @@
         snippet ? el("span", { cls: "snip", text: snippet }) : null,
         el("span", { cls: "chips" }, [statusChip(r.status), chip(meta.cats[r.category] || "", "cat"), r.level && r.level !== "any" ? chip(levelShort(r.level), "lvl") : null,
           el("span", { cls: "rmeta", text: (r.author ? r.author + " · " : "") + ago(r.created) })])]),
-      el("span", { cls: "counts" }, [cnt(count, "הצעות"), chats != null ? cnt(chats, "שיחות") : null])]);
+      r.job ? jobSide(r) : el("span", { cls: "counts" }, [cnt(count, "הצעות"), chats != null ? cnt(chats, "שיחות") : null])]);
+  }
+  function jobSide(r) {
+    var unread = r.chat && r.chat.unread;
+    var kids = [];
+    if (r.client) kids.push(el("span", { cls: "jline" }, [el("span", { cls: "meta", text: "מזמין" }), el("strong", { text: r.client.name })]));
+    if (r.my_bid) kids.push(el("span", { cls: "jline" }, [el("span", { cls: "meta", text: "ההצעה שלך" }), el("strong", { text: r.my_bid.price })]));
+    if (unread) kids.push(el("span", { cls: "jnew", text: unread === 1 ? "הודעה חדשה" : unread + " הודעות חדשות" }));
+    return el("span", { cls: "jside" }, kids);
   }
   function rowsBox(list, emptyText) {
     var box = el("div", { cls: "list" });
@@ -586,7 +594,14 @@
   function minePage() {
     root.appendChild(pageTitle("העבודות שלי"));
     var holder = el("div"); root.appendChild(holder);
-    api("GET", "board").then(function (b) { holder.appendChild(rowsBox(b.mine || [], "עדיין לא נבחרת לעבודה.")); });
+    api("GET", "board").then(function (b) {
+      var jobs = (b.mine || []).map(function (r) { r.job = true; return r; });
+      var sent = (b.open || []).filter(function (r) { return r.my_bid; }).map(function (r) { r.job = true; return r; });
+      holder.appendChild(el("h2", { cls: "sechead", text: "עבודות שנבחרת אליהן (" + jobs.length + ")" }));
+      holder.appendChild(rowsBox(jobs, "עדיין לא נבחרת לעבודה. כשמזמין יבחר בהצעה שלך, העבודה תופיע כאן עם פרטי הקשר שלו."));
+      holder.appendChild(el("h2", { cls: "sechead", text: "הצעות ששלחת וממתינות (" + sent.length + ")" }));
+      holder.appendChild(rowsBox(sent, "אין הצעות פתוחות. אפשר להגיש הצעה מכל בקשה פתוחה בלוח."));
+    });
   }
   function simplePage(title, node) { root.appendChild(pageTitle(title)); root.appendChild(node); }
 
