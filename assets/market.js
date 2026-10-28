@@ -34,7 +34,7 @@
   function msgBox() { return el("div", { cls: "mmsg", role: "status" }); }
   function stars(p) { return p.rating ? " · דירוג " + p.rating + (p.ratings ? " (" + p.ratings + ")" : "") : ""; }
   function proLine(p) {
-    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "").split(":")[0] + stars(p) + (p.founding ? " · חבר מייסד" : "") + (p.ambassador ? " · " + p.ambassador : "");
+    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "").split(":")[0] + stars(p) + (p.ambassador ? " · " + p.ambassador : "");
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   var drawer = null, pulling = null;
@@ -568,6 +568,34 @@
     poll(); badgeTimer = setInterval(poll, 20000);
   }
 
+  function contactAdminPage() {
+    var name = el("input", { placeholder: "שמך" });
+    var contact = el("input", { placeholder: "טלפון או מייל" });
+    var subject = el("input", { placeholder: "נושא" });
+    var msg = el("textarea", { placeholder: "הודעה", rows: 6 });
+    var btn = el("button", { cls: "btn primary", type: "button", text: "שליחה" });
+    var status = el("div", { cls: "mmsg", role: "status" });
+    btn.addEventListener("click", function () {
+      var n = name.value.trim(), c = contact.value.trim(), s = subject.value.trim(), m = msg.value.trim();
+      if (!n || !c || !m) { status.textContent = "נא למלא שם, דרך קשר והודעה."; return; }
+      api("POST", "contact-admin", { name: n, contact: c, subject: s, message: m }).then(function (r) {
+        if (r.__status === 200) { status.textContent = "הודעתך נשלחה. תודה!"; name.value = ""; contact.value = ""; subject.value = ""; msg.value = ""; }
+        else status.textContent = "שגיאה בשליחה, נסה שוב.";
+      });
+    });
+    var box = el("section", { cls: "card mk-sec" }, [
+      el("h2", { text: "צור קשר עם ההנהלה" }),
+      el("label", { cls: "mf" }, [el("span", { text: "שם" }), name]),
+      el("label", { cls: "mf" }, [el("span", { text: "טלפון או מייל" }), contact]),
+      el("label", { cls: "mf" }, [el("span", { text: "נושא (אופציונלי)" }), subject]),
+      el("label", { cls: "mf" }, [el("span", { text: "הודעה" }), msg]),
+      el("div", { cls: "act" }, [btn]),
+      status
+    ]);
+    root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "צור קשר עם ההנהלה" }]));
+    root.appendChild(box);
+  }
+
   // ---- router
   function route() {
     closeChat();
@@ -577,6 +605,7 @@
     var needLogin = ["requests", "new", "mine", "messages", "profile", "partners"];
     if (!me && needLogin.indexOf(p0) >= 0) return root.appendChild(authView("login"));
     if (p0 === "login" || p0 === "register") return me ? go("") : root.appendChild(authView(p0 === "register" ? "reg" : "login"));
+    if (p0 === "contact") return contactAdminPage();
     if (p0 === "c") return feedPage(meta.cats[parts[1]] ? parts[1] : "");
     if (p0 === "r") return requestPage(parts[1]);
     if (p0 === "new") return newRequestPage(parts[1]);

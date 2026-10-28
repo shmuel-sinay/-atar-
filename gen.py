@@ -192,7 +192,7 @@ def fhead(title, path):
 
 def ffoot():
     return '''</div></main>
-<footer class="ffoot"><div class="fwrap">הלוח פועל באישור ידני של ההנהלה · <a href="/contact/">פנייה להנהלה</a></div></footer>
+<footer class="ffoot"><div class="fwrap">הלוח פועל באישור ידני של ההנהלה · <a href="#/contact">צור קשר עם ההנהלה</a></div></footer>
 </body></html>
 '''
 

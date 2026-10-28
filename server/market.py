@@ -15,7 +15,7 @@ lock = threading.Lock()
 hits = {}
 
 LEVEL_RANK = {"basic": 1, "pro": 2, "secure": 3}
-LEVELS = {"basic": "בסיסי: ללא בדיקות אבטחה, המחיר הנמוך ביותר", "pro": "מקצועי: מחיר בינוני", "secure": "מתקדם: מומחים וכולל בדיקות אבטחה, המחיר הגבוה ביותר"}
+LEVELS = {"basic": "בסיסי: ללא אבטחה", "pro": "מקצועי: מפתח ברמה גבוהה כולל בדיקות אבטחה", "secure": "מתקדם"}
 CATS = {"software": "תוכנה וכלים", "website": "אתר", "device": "התאמת מכשיר או מחשב", "design": "עיצוב",
         "writing": "כתיבה ועריכה", "help": "הדרכה ועזרה טכנית", "other": "אחר"}
 SIZES = {"small": "קטנה", "medium": "בינונית", "large": "גדולה"}
@@ -294,6 +294,27 @@ def clean_links(text):
 
 
 # ---------------------------------------------------------------- public API
+def contact_admin(h, d):
+    """Contact management form - saves to file for admin to review."""
+    if limited("contact_" + h.ip(), 3, 3600):
+        return h.reply(429, {"error": "slow down"})
+    name = clip(d.get("name"), 100)
+    contact = clip(d.get("contact"), 100)
+    subject = clip(d.get("subject"), 200)
+    message = clip(d.get("message"), 5000)
+    if not name or not contact or not message:
+        return h.reply(400, {"error": "fields"})
+    import json
+    entry = {"time": int(time.time()), "name": name, "contact": contact, "subject": subject, "message": message}
+    contact_file = os.path.join(DIR, "contact_log.jsonl")
+    try:
+        with open(contact_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
+    return h.reply(200, {"ok": True})
+
+
 def handle(h, method, path):
     try:
         return route(h, method, path)
@@ -351,6 +372,8 @@ def route(h, method, path):
         return login(h, d)
     if method == "POST" and sub == "logout":
         return h.reply(200, {"ok": True}, {"Set-Cookie": "kt_user=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"})
+    if method == "POST" and sub == "contact-admin":
+        return contact_admin(h, d)
     u = session_user(h)
     if method == "GET" and sub.startswith("photo/"):
         return serve_photo(h, sub[6:], u)
