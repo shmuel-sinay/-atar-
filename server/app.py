@@ -33,18 +33,18 @@ DEFAULT = {
                  "apps": "במחיר רצפה", "players": "במחיר רצפה", "translate": "במחיר רצפה", "design": "במחיר רצפה", "scripts": "במחיר רצפה"},
     "products": [
         {"id": "m393", "name": "נגן הכינור",
-         "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מותאם ומסונן לפי בחירתך.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nWiFi, Bluetooth 5.0 ורדיו FM\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
+         "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מוכשר ומוכן לשמיעה וללימוד.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nBluetooth 5.0 ורדיו FM, מגיע בלי אינטרנט\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
          "price": "", "status": "out", "image": "/assets/products/kinor-set.jpg",
          "gallery": ["/assets/products/kinor-set.jpg", "/assets/products/kinor-front.jpg"], "visible": True},
         {"id": "m36plus", "name": "נגן הנבל",
-         "desc": "נגן אנדרואיד עם מצלמה ופנס, מגיע מותאם ומסונן לפי בחירתך.\n32GB אחסון\nכרטיס זיכרון\nמצלמה ופנס (אפשר גם בלי מצלמה)\nכפתור ייעודי בצד המכשיר",
+         "desc": "נגן אנדרואיד עם פנס, מגיע מוכשר ומוכן לשמיעה וללימוד.\n32GB אחסון\nכרטיס זיכרון\nמצלמה ופנס (אפשר גם בלי מצלמה)\nכפתור ייעודי בצד המכשיר",
          "price": "", "status": "order", "image": "/assets/products/nevel-back.jpg",
          "gallery": ["/assets/products/nevel-back.jpg"], "visible": True},
         {"id": "other", "name": "דגמים נוספים", "desc": "יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.",
          "price": "לפי דגם", "status": "order", "image": "", "visible": True},
     ],
 }
-CATALOG = 2  # bump to roll new default products into an existing data file
+CATALOG = 3  # bump to roll new default products into an existing data file
 
 def secret():
     os.makedirs(DIR, exist_ok=True)
