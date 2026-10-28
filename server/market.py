@@ -23,7 +23,7 @@ DEFAULT_SETTINGS = {
     "base": {"software": 300, "website": 400, "device": 150, "design": 200, "writing": 100, "help": 80, "other": 150},
     "level_mult": {"basic": 1.0, "pro": 1.8, "secure": 2.8},
     "size_mult": {"small": 1.0, "medium": 2.2, "large": 4.5},
-    "reward": {"amount": 30.0},
+    "reward": {"amount": 10.0, "bonus": 30.0},
 }
 UNIT = "קרדיטים"
 DUMMY_PW = "00" * 16 + ":" + "00" * 32
@@ -67,6 +67,8 @@ def init(secret, directory):
                 c.execute(stmt)
             except sqlite3.OperationalError:
                 pass
+        # partner rewards have no approval stages any more
+        c.execute("UPDATE credits SET status='approved' WHERE status='pending'")
     os.makedirs(os.path.join(directory, "market_photos"), exist_ok=True)
 
 
@@ -402,14 +404,14 @@ def route(h, method, path):
     if method == "GET" and sub == "partner":
         with db() as c:
             code = ensure_code(c, u)
-            rows = c.execute("SELECT amount, status, created FROM credits WHERE user_id=? ORDER BY id DESC", (u["id"],)).fetchall()
+            rows = c.execute("SELECT amount, status, request_id, created FROM credits WHERE user_id=? AND status<>'rejected' ORDER BY id DESC", (u["id"],)).fetchall()
             n = c.execute("SELECT COUNT(*) FROM users WHERE referred_by=?", (u["id"],)).fetchone()[0]
-        tot = {k: sum(r["amount"] for r in rows if r["status"] == k) for k in ("pending", "approved", "paid")}
         with db() as c2:
             level = amb_level(c2, u["id"])
-        return h.reply(200, {"code": code, "referred": n, "unit": UNIT, "totals": tot, "level": level,
-                             "credits": [{"amount": r["amount"], "status": r["status"], "at": r["created"]} for r in rows],
-                             "reward": settings()["reward"]["amount"]})
+        return h.reply(200, {"code": code, "referred": n, "unit": UNIT, "level": level,
+                             "signups": sum(1 for r in rows if r["request_id"] < 0), "orders": sum(1 for r in rows if r["request_id"] > 0),
+                             "total": sum(r["amount"] for r in rows),
+                             "reward": settings()["reward"]["amount"], "bonus": settings()["reward"]["bonus"]})
     if sub == "chats" or sub.startswith("chats/"):
         return chat_routes(h, method, sub, d, u)
     if u["role"] == "client":
@@ -440,6 +442,7 @@ def register(h, d):
         cur = c.execute("INSERT INTO users(email,name,pw,role,status,created,terms_at,ref_code,referred_by) VALUES(?,?,?,?,?,?,?,?,?)",
                         (email, name, hash_pw(pw), role, status, int(time.time()), int(time.time()), new_code(c), refu["id"] if refu else None))
         uid = cur.lastrowid
+        reward_signup(c, uid, refu["id"] if refu else None)
         if role == "pro":
             c.execute("INSERT INTO pros(user_id,kind,field,bio,exp,links) VALUES(?,?,?,?,?,?)",
                       (uid, d.get("kind") if d.get("kind") in ("individual", "company") else "individual",
@@ -610,9 +613,11 @@ def client_routes(h, method, sub, d, u):
             if not b:
                 return h.reply(404, {"error": "not found"})
             c.execute("UPDATE requests SET status='taken', chosen_bid=?, taken_pro=? WHERE id=?", (b["id"], b["pro_id"], rid))
+            award(c, u, rid)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/found" and r["status"] == "open":
             c.execute("UPDATE requests SET status='taken' WHERE id=?", (rid,))
+            award(c, u, rid)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/reopen" and r["status"] == "taken":
             c.execute("UPDATE requests SET status='open', chosen_bid=NULL, taken_pro=NULL WHERE id=?", (rid,))
@@ -683,18 +688,24 @@ def pro_routes(h, method, sub, d, u):
     return h.reply(404, {"error": "not found"})
 
 
+def reward_signup(c, uid, ref):
+    """Bringing someone in earns a reward at once; signup rewards use request_id = -new user id."""
+    amount = settings()["reward"]["amount"]
+    if ref and ref != uid and amount > 0:
+        c.execute("INSERT OR IGNORE INTO credits(user_id,referred_id,request_id,amount,status,created) VALUES(?,?,?,?,'approved',?)",
+                  (ref, uid, -uid, amount, int(time.time())))
+
+
 def award(c, client, rid):
-    """A partner earns one pending reward when the client he brought gets his first job done."""
+    """Bonus once per brought-in client, the first time he actually orders (picks a pro or finishes a job)."""
     ref = client["referred_by"]
     if not ref or ref == client["id"]:
         return
-    if c.execute("SELECT COUNT(*) FROM requests WHERE user_id=? AND status='done'", (client["id"],)).fetchone()[0] != 1:
+    if c.execute("SELECT 1 FROM credits WHERE referred_id=? AND request_id>0", (client["id"],)).fetchone():
         return
-    if not c.execute("SELECT 1 FROM users WHERE id=? AND status='active'", (ref,)).fetchone():
-        return
-    amount = settings()["reward"]["amount"]
+    amount = settings()["reward"]["bonus"]
     if amount > 0:
-        c.execute("INSERT OR IGNORE INTO credits(user_id,referred_id,request_id,amount,created) VALUES(?,?,?,?,?)",
+        c.execute("INSERT OR IGNORE INTO credits(user_id,referred_id,request_id,amount,status,created) VALUES(?,?,?,?,'approved',?)",
                   (ref, client["id"], rid, amount, int(time.time())))
 
 
@@ -850,10 +861,10 @@ def admin_route(h, method, sub):
                 reqs.append(o)
             reqs.sort(key=lambda x: (order.get(x["status"], 9), -x["id"]))
             credits = []
-            for cr in c.execute("SELECT * FROM credits ORDER BY (status='pending') DESC, id DESC LIMIT 300").fetchall():
+            for cr in c.execute("SELECT * FROM credits ORDER BY id DESC LIMIT 300").fetchall():
                 a = c.execute("SELECT name, email FROM users WHERE id=?", (cr["user_id"],)).fetchone()
                 b = c.execute("SELECT name FROM users WHERE id=?", (cr["referred_id"],)).fetchone()
-                credits.append({"id": cr["id"], "amount": cr["amount"], "status": cr["status"], "partner": a["name"] if a else "", "email": a["email"] if a else "",
+                credits.append({"id": cr["id"], "amount": cr["amount"], "status": cr["status"], "kind": "order" if cr["request_id"] > 0 else "signup", "partner": a["name"] if a else "", "email": a["email"] if a else "",
                                 "referred": b["name"] if b else "", "at": cr["created"]})
             return h.reply(200, {"users": users, "requests": reqs, "credits": credits, "unit": UNIT, "settings": settings(), "labels": {"cats": CATS, "levels": LEVELS, "sizes": SIZES}})
         if method == "POST" and sub == "user":

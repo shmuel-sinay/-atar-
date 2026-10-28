@@ -134,18 +134,16 @@
     if (!data.requests.length) rl.appendChild(el("p", { cls: "meta", text: "אין בקשות." }));
 
     var cl = document.getElementById("clist"); cl.textContent = "";
-    var CS = { pending: "ממתין", approved: "אושר", paid: "שולם", rejected: "נדחה" };
-    document.getElementById("pcount").textContent = data.credits.filter(function (c) { return c.status === "pending"; }).length ? "(" + data.credits.filter(function (c) { return c.status === "pending"; }).length + ")" : "";
+    document.getElementById("pcount").textContent = "";
+    var KIND = { signup: "נרשם דרכו", order: "בונוס: הזמין עבודה" };
     data.credits.forEach(function (c) {
-      var acts = el("div", { cls: "act" });
-      function setC(st) { call("POST", "credit", { id: c.id, status: st }).then(function () { note("נשמר"); load(); }); }
-      if (c.status !== "approved" && c.status !== "paid") acts.appendChild(btn("אישור", function () { setC("approved"); }));
-      if (c.status === "approved") acts.appendChild(btn("סימון כשולם", function () { setC("paid"); }));
-      if (c.status !== "rejected" && c.status !== "paid") acts.appendChild(btn("דחייה", function () { setC("rejected"); }, true));
-      cl.appendChild(el("div", { cls: "box" }, [el("strong", { text: c.partner + " · " + c.amount + " " + data.unit }),
-        el("div", { cls: "meta", text: CS[c.status] + " · הביא את: " + c.referred + " · " + c.email }), acts]));
+      var off = c.status === "rejected";
+      var acts = el("div", { cls: "act" }, [off ? btn("החזרה", function () { call("POST", "credit", { id: c.id, status: "approved" }).then(function () { note("נשמר"); load(); }); })
+        : btn("ביטול (למשל הרשמה מזויפת)", function () { if (confirm("לבטל את התגמול?")) call("POST", "credit", { id: c.id, status: "rejected" }).then(function () { note("נשמר"); load(); }); }, true)]);
+      cl.appendChild(el("div", { cls: "box" + (off ? " done" : "") }, [el("strong", { text: c.partner + " · " + c.amount + " " + data.unit + (off ? " · בוטל" : "") }),
+        el("div", { cls: "meta", text: KIND[c.kind] + ": " + c.referred + " · " + c.email }), acts]));
     });
-    if (!data.credits.length) cl.appendChild(el("p", { cls: "meta", text: "אין תגמולים עדיין. תגמול נוצר כשהעבודה הראשונה של מבקש שהוזמן מסתיימת." }));
+    if (!data.credits.length) cl.appendChild(el("p", { cls: "meta", text: "אין תגמולים עדיין. כל מי שנרשם דרך קישור של משתמש מזכה אותו מיד, ואם הוא גם מזמין עבודה, בבונוס נוסף." }));
 
     var eb = document.getElementById("elist"); eb.textContent = "";
     var inputs = {};
@@ -161,7 +159,7 @@
     group("מחיר בסיס לפי תחום (ש\"ח)", "base", CATMAP, "עבודה קטנה ברמה בסיסית.");
     group("מכפיל לפי רמה", "level_mult", LEVELMAP, "מוכפל במחיר הבסיס.");
     group("מכפיל לפי גודל", "size_mult", SIZEMAP, "מוכפל במחיר הבסיס.");
-    group("תגמול שותפים", "reward", { amount: "תגמול לכל מבקש חדש (" + data.unit + ")" }, "נוצר כשהעבודה הראשונה של מבקש שהוזמן מסתיימת, ומחכה לאישורך.");
+    group("תגמול שותפים", "reward", { amount: "על כל מי שנרשם דרך הקישור (" + data.unit + ")", bonus: "בונוס כשהוא גם מזמין עבודה (" + data.unit + ")" }, "ניתן מיד, בלי שלבי אישור. אפשר לבטל תגמול חשוד בלשונית שותפים.");
     eb.appendChild(el("p", { cls: "meta", text: "מחירי הבסיס והמכפילים לשימוש פנימי שלך בלבד. הם לא מוצגים למשתמשים." }));
     document.getElementById("saveest").onclick = function () {
       var out = { base: {}, level_mult: {}, size_mult: {}, reward: {} };
