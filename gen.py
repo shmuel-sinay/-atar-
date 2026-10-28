@@ -177,13 +177,13 @@ def fhead(title, path):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#1e1b4b">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/assets/forum-icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="{V("assets/forum.css")}">
 </head>
 <body class="forum">
 <header class="fbar"><div class="fwrap">
-  <a class="fbrand" href="/market/"><span class="fmark"></span>{FORUM}</a>
+  <a class="fbrand" href="/market/">{FORUM}</a>
   <nav><a href="/market/"{' aria-current="page"' if path == "/market/" else ""}>הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/"{' aria-current="page"' if path == "/market/rules/" else ""}>כללי הלוח</a></nav>
   <div id="fuser" class="fuser"></div>
 </div></header>
@@ -212,11 +212,9 @@ write("/request/", r)
 
 # ---------- MARKET ----------
 mk = fhead(FORUM, "/market/")
-mk += '''<div id="fland"><div class="fhero"><h1>%s</h1><p class="flead">מבקשים. מציעים. עושים.</p><p>לוח שמחבר בין מי שצריך עבודה, תוכנה או שירות לבין אנשי מקצוע וחברות שאושרו. כל בקשה, כל הצטרפות וכל תמונה עוברות אישור ידני של ההנהלה.</p></div>
-<div class="fsteps"><div><span>1</span><h3>מפרסמים בקשה</h3><p>מתארים מה צריך, ומקבלים הערכת מחיר ראשונית.</p></div><div><span>2</span><h3>מקבלים הצעות</h3><p>אנשי מקצוע מציעים מחיר וזמן, אפשר לשוחח איתם בצ'אט פרטי.</p></div><div><span>3</span><h3>בוחרים ומדרגים</h3><p>בוחרים הצעה, פרטי הקשר נחשפים רק לנבחר, ובסיום מדרגים.</p></div></div></div>
-<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
+mk += '''<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
 <script src="%s" defer></script>
-''' % (FORUM, V("assets/market.js"))
+''' % V("assets/market.js")
 mk += ffoot()
 write("/market/", mk)
 
@@ -290,7 +288,7 @@ RULES = [
  ]),
 ]
 ru = fhead("כללי הלוח | " + FORUM, "/market/rules/")
-ru += '<div class="fhero"><h1>כללי הלוח</h1><p>הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p></div><div class="fstack">'
+ru += '<div class="ptitle"><h1>כללי הלוח</h1></div><p class="sub">הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p><div class="fstack">'
 for t, items in RULES:
     ru += '<article class="card"><h3>%s</h3><ul>%s</ul></article>' % (html.escape(t), "".join("<li>%s</li>" % html.escape(x) for x in items))
 ru += '</div>'

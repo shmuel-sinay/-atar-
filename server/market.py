@@ -297,6 +297,18 @@ def route(h, method, path):
             res = [pro_card(r, {"id": r["id"], "name": r["name"]}, c) for r in rows]
         res.sort(key=lambda x: (-(x["rating"] or 0), -LEVEL_RANK.get(x["level"], 1)))
         return h.reply(200, res)
+    if method == "GET" and sub == "categories":
+        live = "status IN ('open','taken','done')"
+        with db() as c:
+            cats = {}
+            for k in CATS:
+                n = c.execute("SELECT COUNT(*) FROM requests WHERE category=? AND " + live, (k,)).fetchone()[0]
+                b = c.execute("SELECT COUNT(*) FROM bids b JOIN requests r ON r.id=b.request_id WHERE r.category=? AND r.status IN ('open','taken','done')", (k,)).fetchone()[0]
+                last = c.execute("SELECT MAX(created) FROM requests WHERE category=? AND " + live, (k,)).fetchone()[0]
+                cats[k] = {"requests": n, "bids": b, "last": last}
+            pros = c.execute("SELECT COUNT(*) FROM users WHERE role='pro' AND status='active'").fetchone()[0]
+            done = c.execute("SELECT COUNT(*) FROM requests WHERE status='done'").fetchone()[0]
+        return h.reply(200, {"cats": cats, "pros": pros, "done": done})
     if method == "POST" and sub == "register":
         return register(h, d)
     if method == "POST" and sub == "login":
