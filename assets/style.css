@@ -126,3 +126,21 @@ ul.feat li{background:var(--card);border:1px solid var(--line);border-inline-sta
 .tierpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.9rem;color:var(--ink-soft)}
 .tierpick button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer}
 .tierpick button.on{background:var(--green);border-color:var(--green);color:#fff}
+.quiz{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 28px;margin:0 0 40px;box-shadow:var(--shadow);display:grid;gap:14px}
+.qhead h2{margin:0;font-size:1.6rem;color:var(--green)}
+.qhead p{margin:4px 0 0;color:var(--ink-soft)}
+.qbar{height:6px;background:color-mix(in srgb,var(--line) 70%,transparent);border-radius:3px;overflow:hidden}
+.qbar span{display:block;height:100%;background:var(--gold);transition:width .25s}
+.qq{margin:6px 0 0;font-size:1.3rem}
+.qhint{margin:-6px 0 0;color:var(--ink-soft);font-size:.95rem}
+.qopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.qopt{font:inherit;font-size:1.05rem;text-align:start;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
+.qopt:hover{border-color:var(--gold)}
+.qopt.on{border-color:var(--green);background:color-mix(in srgb,var(--green) 10%,var(--card))}
+.qnav{display:flex;gap:10px;flex-wrap:wrap}
+.qnav .btn:disabled{opacity:.45;cursor:not-allowed}
+.qres{display:grid;gap:10px;background:color-mix(in srgb,var(--gold-soft) 45%,var(--card));border-radius:14px;padding:18px 20px}
+.qres h3{margin:0;font-size:1.5rem}
+.qres ul{margin:0;padding-inline-start:20px;display:grid;gap:6px}
+.qlabel{font-size:.85rem;font-weight:700;color:var(--green)}
+.qwarn{color:#9a3412;font-weight:600}
