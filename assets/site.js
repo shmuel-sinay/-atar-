@@ -46,7 +46,7 @@
         }
         c.appendChild(line);
         var a = el("a", p.status === "in" ? "btn primary" : "link", p.status === "in" ? "להזמנה" : p.status === "out" ? "עדכנו אותי כשיחזור" : "לבירור");
-        a.href = "/contact/?subject=" + encodeURIComponent("חנות / מוצרים");
+        a.href = "/contact/?product=" + encodeURIComponent(p.name || "");
         c.appendChild(a);
         box.appendChild(c);
       });

@@ -7,7 +7,7 @@
     if (rq && /^[0-9a-f]{4,20}$/.test(rq)) localStorage.setItem("mk_ref", rq);
   } catch (e) {}
   function savedRef() { try { return localStorage.getItem("mk_ref") || ""; } catch (e) { return ""; } }
-  var STATUS = { review: "ממתינה לאישור הנהלה", open: "פתוחה להצעות", taken: "נלקחה", done: "בוצעה", closed: "סגורה" };
+  var STATUS = { review: "ממתינה לאישור הנהלה", open: "מחפש בעל מקצוע", taken: "נמצא בעל מקצוע", done: "בוצעה", closed: "סגורה" };
   var CAT_DESC = { software: "כלים, סקריפטים ותוכנות בהתאמה אישית", website: "אתרים ודפי נחיתה", device: "התאמת מכשירים ומחשבים",
     design: "עיצוב גרפי ומיתוג", writing: "כתיבה, עריכה, הגהה ותרגום", help: "הדרכה, ייעוץ ועזרה טכנית", other: "כל נושא אחר" };
 
@@ -249,41 +249,6 @@
     return wrap;
   }
 
-  function requestCard(r, refresh) {
-    var kids = [r.tagged ? el("p", { cls: "mk-ok", text: "מתויג: " + r.tagged.name + (r.tagged.only ? " (גלוי רק לו)" : "") }) : null,
-      el("p", { cls: "meta", text: STATUS[r.status] + " · " + (meta.cats[r.category] || "") + " · " + (r.level === "any" ? "כל רמה" : meta.levels[r.level] || "") }),
-      el("p", { text: r.desc }), r.estimate ? el("p", { cls: "meta", text: rangeText(r.estimate) }) : null];
-    function act(label, url, data, confirmText) {
-      var b = el("button", { cls: "btn ghost sm", type: "button", text: label });
-      b.addEventListener("click", function () { if (confirmText && !confirm(confirmText)) return; api("POST", url, data).then(refresh); });
-      return b;
-    }
-    (r.bids || []).forEach(function (b) {
-      var row = el("div", { cls: "mk-bid" }, [el("div", { cls: "who" }, [avatar(b.pro), el("div", {}, [el("strong", { text: b.pro.name }), el("div", { cls: "meta", text: proLine(b.pro) })])]),
-        b.pro.exp ? el("div", { cls: "meta", text: "ניסיון: " + b.pro.exp }) : null,
-        el("div", { text: "מחיר: " + b.price + (b.days ? " · זמן: " + b.days : "") }), b.note ? el("div", { text: b.note }) : null]);
-      linksOf(b.pro).forEach(function (a) { row.appendChild(a); });
-      var cb = el("button", { cls: "btn ghost sm", type: "button", text: "צ'אט עם " + b.pro.name + (b.chat && b.chat.unread ? " · חדשות: " + b.chat.unread : "") });
-      cb.addEventListener("click", function () { startChat({ request_id: r.id, pro_id: b.pro.id }, b.pro.name + " · " + r.title); });
-      row.appendChild(cb);
-      if (b.chosen) row.appendChild(el("div", { cls: "mk-ok", text: "נבחר. ליצירת קשר: " + (b.pro.email || "") }));
-      else if (r.status === "open") row.appendChild(act("בחירה בהצעה", "requests/choose", { request_id: r.id, bid_id: b.id }, "לבחור בהצעה הזאת? פרטי הקשר שלך יועברו אליו."));
-      kids.push(row);
-    });
-    if (r.status === "open" && !(r.bids || []).length) kids.push(el("p", { cls: "meta", text: "עדיין אין הצעות." }));
-    var acts = el("div", { cls: "act" });
-    if (r.status === "taken") acts.appendChild(act("סימון כבוצע", "requests/done", { request_id: r.id }, "לסמן שהעבודה בוצעה?"));
-    if (r.status === "review" || r.status === "open") acts.appendChild(act("סגירת הבקשה", "requests/close", { request_id: r.id }, "לסגור את הבקשה?"));
-    if (r.status === "done" && !r.rated) {
-      var st = select({ 5: "5 מצוין", 4: "4 טוב מאוד", 3: "3 סביר", 2: "2 חלש", 1: "1 לא מרוצה" }, "5"), tx = el("input", { placeholder: "הערה קצרה (אופציונלי)" });
-      var rb = el("button", { cls: "btn primary sm", type: "button", text: "שליחת דירוג" });
-      rb.addEventListener("click", function () { api("POST", "rate", { request_id: r.id, stars: Number(st.value), text: tx.value }).then(refresh); });
-      acts.appendChild(st); acts.appendChild(tx); acts.appendChild(rb);
-    }
-    kids.push(acts);
-    return section(r.title, kids);
-  }
-
   function proProfile(p) {
     var kind = select({ individual: "איש מקצוע פרטי", company: "חברה" }, p.kind), fld = el("input", { value: p.field || "" }),
       bio = el("textarea", { rows: 3, value: p.bio || "" }), exp = el("input", { value: p.exp || "", placeholder: "למשל: 5 שנים בפיתוח" }),
@@ -348,6 +313,9 @@
     return "לפני " + Math.floor(s / 86400) + " ימים";
   }
   function isProActive() { return me && me.role === "pro" && me.status === "active"; }
+  function chip(text, cls) { return el("span", { cls: "chip " + (cls || ""), text: text }); }
+  function statusChip(s) { return chip(STATUS[s] || s, "st-" + s); }
+  function levelShort(l) { return l === "any" ? "כל רמה" : (meta.levels[l] || "").split(":")[0]; }
   function crumbs(parts) {
     var box = el("div", { cls: "crumbs" });
     parts.forEach(function (p, i) {
@@ -356,119 +324,180 @@
     });
     return box;
   }
-  function pageTitle(text, actions) {
-    return el("div", { cls: "ptitle" }, [el("h1", { text: text })].concat(actions || []));
-  }
+  function pageTitle(text, actions) { return el("div", { cls: "ptitle" }, [el("h1", { text: text })].concat(actions || [])); }
   function note(text) { return el("p", { cls: "note", text: text }); }
   function linkBtn(text, href, primary) { return el("a", { cls: "btn" + (primary ? " primary" : ""), href: href, text: text }); }
 
-  function requestRows(list, showCat) {
+  function feedRow(r) {
+    var count = Array.isArray(r.bids) ? r.bids.length : (r.bids || 0);
+    var chats = r.chats != null ? r.chats : null;
+    var snippet = r.snippet || (r.desc || "").slice(0, 140);
+    return el("a", { cls: "row", href: "#/r/" + r.id }, [
+      el("span", { cls: "grow" }, [
+        el("span", { cls: "line" }, [el("strong", { cls: "ttl", text: r.title }), r.for_me ? chip("מיועדת אליך", "tag") : null, r.mine ? chip("שלי", "tag") : null]),
+        el("span", { cls: "snip", text: snippet }),
+        el("span", { cls: "chips" }, [statusChip(r.status), chip(meta.cats[r.category] || "", "cat"), chip(levelShort(r.level), "lvl"),
+          el("span", { cls: "sub", text: (r.author ? r.author + " · " : "") + ago(r.created) })])]),
+      el("span", { cls: "num" }, [el("b", { text: String(count) }), el("small", { text: "הצעות" })]),
+      chats != null ? el("span", { cls: "num" }, [el("b", { text: String(chats) }), el("small", { text: "שיחות" })]) : null]);
+  }
+  function rowsBox(list, emptyText) {
     var box = el("div", { cls: "list" });
-    if (!list.length) box.appendChild(el("p", { cls: "empty", text: "אין כאן בקשות עדיין." }));
-    list.forEach(function (r) {
-      var info = [STATUS[r.status]];
-      if (showCat) info.push(meta.cats[r.category] || "");
-      info.push(r.level === "any" ? "כל רמה" : (meta.levels[r.level] || "").split(":")[0]);
-      if (r.estimate) info.push("הערכה " + r.estimate.lo + "–" + r.estimate.hi + " ש\"ח");
-      var count = r.bids ? r.bids.length : (r.bids_count != null ? r.bids_count : null);
-      box.appendChild(el("a", { cls: "row", href: "#/r/" + r.id }, [
-        el("span", { cls: "grow" }, [el("strong", { cls: "ttl", text: r.title }), r.for_me ? el("span", { cls: "tag", text: "מיועדת אליך" }) : null,
-          r.my_bid ? el("span", { cls: "tag ok", text: "הגשת הצעה" }) : null, el("span", { cls: "sub", text: info.join(" · ") })]),
-        count != null ? el("span", { cls: "num" }, [el("b", { text: String(count) }), el("small", { text: "הצעות" })]) : null]));
-    });
+    if (!list.length) box.appendChild(el("p", { cls: "empty", text: emptyText || "אין כאן בקשות עדיין." }));
+    list.forEach(function (r) { box.appendChild(feedRow(r)); });
     return box;
   }
 
-  // ---- home
-  function homePage() {
-    root.appendChild(pageTitle("לוח עבודות ושירותים"));
-    var intro = el("div", { cls: "intro" }, [el("p", { text: "מקום לפרסם בקשה לעבודה, לתוכנה או לשירות, לקבל הצעות מאנשי מקצוע וחברות מאושרים, לבחור ולדרג. כל הצטרפות, בקשה ותמונה עוברות אישור ידני של ההנהלה." })]);
-    if (!me) intro.appendChild(el("p", { cls: "acts" }, [linkBtn("הרשמה", "#/register", true), linkBtn("התחברות", "#/login")]));
-    else if (me.role === "client") intro.appendChild(el("p", { cls: "acts" }, [linkBtn("בקשה חדשה", "#/new", true)]));
-    root.appendChild(intro);
-    var list = el("div", { cls: "cats" });
-    root.appendChild(list);
-    api("GET", "categories").then(function (st) {
-      Object.keys(meta.cats).forEach(function (k) {
-        var s = (st.cats || {})[k] || { requests: 0, bids: 0, last: null };
-        list.appendChild(el("a", { cls: "cat", href: "#/c/" + k }, [
-          el("span", { cls: "grow" }, [el("strong", { cls: "ttl", text: meta.cats[k] }), el("span", { cls: "sub", text: CAT_DESC[k] || "" })]),
-          el("span", { cls: "num" }, [el("b", { text: String(s.requests) }), el("small", { text: "בקשות" })]),
-          el("span", { cls: "num" }, [el("b", { text: String(s.bids) }), el("small", { text: "הצעות" })]),
-          el("span", { cls: "last", text: s.last ? "בקשה אחרונה " + ago(s.last) : "" })]));
-      });
-      root.appendChild(el("p", { cls: "stats", text: (st.pros || 0) + " אנשי מקצוע מאושרים · " + (st.done || 0) + " עבודות הושלמו" }));
-    });
-  }
-
-  // ---- category
-  function categoryPage(k) {
-    if (!meta.cats[k]) return root.appendChild(note("הקטגוריה לא נמצאה."));
-    root.appendChild(crumbs([{ text: "הלוח", href: "#/" }, { text: meta.cats[k] }]));
-    root.appendChild(pageTitle(meta.cats[k], me && me.role === "client" ? [linkBtn("בקשה חדשה", "#/new/" + k, true)] : []));
-    root.appendChild(el("p", { cls: "sub", text: CAT_DESC[k] || "" }));
+  // ---- home: all requests, like topics in a forum
+  function feedPage(cat) {
+    var top = [];
+    if (me && me.role === "client") top.push(linkBtn("בקשה חדשה", "#/new" + (cat ? "/" + cat : ""), true));
+    root.appendChild(pageTitle("בקשות עבודה ושירותים", top));
+    if (!me) {
+      root.appendChild(el("div", { cls: "welcome" }, [el("span", { text: "כל הבקשות פתוחות לצפייה. כדי לפרסם בקשה או להציע מחיר יש להירשם. כל הצטרפות ובקשה מאושרות ידנית על ידי ההנהלה." }),
+        el("span", { cls: "acts" }, [linkBtn("הרשמה", "#/register", true), linkBtn("התחברות", "#/login")])]));
+    }
+    var chipsBar = el("div", { cls: "chipbar" });
+    root.appendChild(chipsBar);
+    var status = el("select"), search = el("input", { type: "search", placeholder: "חיפוש בבקשות" });
+    [["open", "מחפשים בעל מקצוע"], ["taken", "נמצא בעל מקצוע"], ["done", "בוצעו"], ["all", "הכל"]].forEach(function (o) { status.appendChild(el("option", { value: o[0], text: o[1] })); });
+    root.appendChild(el("div", { cls: "tools" }, [status, search]));
     var holder = el("div");
     root.appendChild(holder);
-    if (isProActive()) {
-      api("GET", "board").then(function (b) { holder.appendChild(requestRows((b.open || []).filter(function (r) { return r.category === k; }))); });
-    } else if (me && me.role === "client") {
-      holder.appendChild(note("מוצגות כאן הבקשות שלך בקטגוריה."));
-      api("GET", "my/requests").then(function (rows) { holder.appendChild(requestRows((Array.isArray(rows) ? rows : []).filter(function (r) { return r.category === k; }))); });
-    } else if (me) {
-      holder.appendChild(note("הבקשות יוצגו לאחר שההנהלה תאשר את ההצטרפות שלך."));
-    } else {
-      holder.appendChild(note("בקשות פתוחות מוצגות לאנשי מקצוע מאושרים. אפשר להירשם או להתחבר."));
+    function loadFeed() {
+      var qs = "status=" + encodeURIComponent(status.value) + (cat ? "&cat=" + encodeURIComponent(cat) : "") + (search.value.trim() ? "&q=" + encodeURIComponent(search.value.trim()) : "");
+      api("GET", "feed?" + qs).then(function (rows) {
+        holder.textContent = "";
+        holder.appendChild(rowsBox(Array.isArray(rows) ? rows : [], status.value === "open" ? "אין כרגע בקשות פתוחות." : "אין בקשות להצגה."));
+      });
     }
+    status.addEventListener("change", loadFeed);
+    var t = null;
+    search.addEventListener("input", function () { clearTimeout(t); t = setTimeout(loadFeed, 300); });
+    api("GET", "categories").then(function (st) {
+      chipsBar.appendChild(el("a", { cls: "fchip" + (cat ? "" : " on"), href: "#/", text: "הכל" }));
+      Object.keys(meta.cats).forEach(function (k) {
+        var n = ((st.cats || {})[k] || {}).requests || 0;
+        chipsBar.appendChild(el("a", { cls: "fchip" + (cat === k ? " on" : ""), href: "#/c/" + k, text: meta.cats[k] + (n ? " (" + n + ")" : "") }));
+      });
+    });
+    loadFeed();
   }
 
-  // ---- request page
-  function proRequestBlock(r, refresh) {
-    var price = el("input", { placeholder: "מחיר", value: r.my_bid ? r.my_bid.price : "" }), days = el("input", { placeholder: "זמן", value: r.my_bid ? r.my_bid.days : "" }),
-      noteIn = el("input", { placeholder: "הערה", value: r.my_bid ? r.my_bid.note : "" }), m = msgBox();
-    var bb = el("button", { cls: "btn primary", type: "button", text: r.my_bid ? "עדכון הצעה" : "שליחת הצעה" });
-    bb.addEventListener("click", function () {
-      api("POST", "bids", { request_id: r.id, price: price.value, days: days.value, note: noteIn.value }).then(function (x) { m.textContent = x.ok ? "ההצעה נשמרה." : "נא להזין מחיר."; });
-    });
-    var cb = el("button", { cls: "btn", type: "button", text: "צ'אט עם המבקש" + (r.chat && r.chat.unread ? " · חדשות: " + r.chat.unread : "") });
-    cb.addEventListener("click", function () { startChat({ request_id: r.id }, "מבקש · " + r.title); });
-    return [el("div", { cls: "mk-bidform" }, [price, days, noteIn, bb]), m, el("div", { cls: "act" }, [cb])];
-  }
+  // ---- one request: everything about it in one page
   function requestPage(id) {
-    root.appendChild(crumbs([{ text: "הלוח", href: "#/" }, { text: "בקשה" }]));
+    root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה" }]));
     var holder = el("div");
     root.appendChild(holder);
     function draw() {
       holder.textContent = "";
-      if (me && me.role === "client") {
-        api("GET", "my/requests").then(function (rows) {
-          var r = (Array.isArray(rows) ? rows : []).filter(function (x) { return String(x.id) === String(id); })[0];
-          holder.appendChild(r ? requestCard(r, draw) : note("הבקשה לא נמצאה."));
-        });
-      } else if (isProActive()) {
-        api("GET", "board").then(function (b) {
-          var r = (b.open || []).filter(function (x) { return String(x.id) === String(id); })[0], mine = false;
-          if (!r) { r = (b.mine || []).filter(function (x) { return String(x.id) === String(id); })[0]; mine = !!r; }
-          if (!r) { holder.appendChild(note("הבקשה לא נמצאה או שאינה זמינה לך.")); return; }
-          var kids = [el("p", { cls: "sub", text: STATUS[r.status] + " · " + (meta.cats[r.category] || "") + " · " + (r.level === "any" ? "כל רמה" : meta.levels[r.level] || "") + (r.budget ? " · תקציב: " + r.budget : "") }),
-            r.for_me ? el("p", { cls: "mk-ok", text: "מיועדת אליך" }) : null, el("p", { text: r.desc }), r.estimate ? el("p", { cls: "sub", text: rangeText(r.estimate) }) : null];
-          if (mine) {
-            kids.push(el("p", { text: "מבקש: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }));
-            var cb = el("button", { cls: "btn", type: "button", text: "צ'אט עם " + r.client.name });
-            cb.addEventListener("click", function () { startChat({ request_id: r.id }, r.client.name + " · " + r.title); });
-            kids.push(cb);
-          } else proRequestBlock(r, draw).forEach(function (n) { kids.push(n); });
-          holder.appendChild(section(r.title, kids));
-        });
-      } else holder.appendChild(note("הבקשות מוצגות רק לאנשי מקצוע מאושרים ולמי שפרסם אותן."));
+      api("GET", "requests/" + id).then(function (r) {
+        if (!r.id) { holder.appendChild(note("הבקשה לא נמצאה או שאינה זמינה.")); return; }
+        var main = el("article", { cls: "post" }, [
+          el("h1", { text: r.title }),
+          el("div", { cls: "chips" }, [statusChip(r.status), chip(meta.cats[r.category] || "", "cat"), chip(levelShort(r.level), "lvl"),
+            r.tagged ? chip("מתויג: " + r.tagged.name + (r.tagged.only ? " (פרטי)" : ""), "tag") : null,
+            r.via_admin ? chip("מטעם ההנהלה", "tag") : null]),
+          el("p", { cls: "sub", text: (r.author ? "פורסם על ידי " + r.author + " · " : "") + ago(r.created) + (r.budget ? " · תקציב: " + r.budget : "") }),
+          el("p", { cls: "body", text: r.desc }), r.estimate ? el("p", { cls: "sub", text: rangeText(r.estimate) }) : null]);
+        holder.appendChild(main);
+
+        if (r.viewer === "guest" && !me) {
+          holder.appendChild(el("div", { cls: "panel" }, [el("strong", { text: "רוצה להציע מחיר או לפתוח שיחה?" }),
+            el("p", { cls: "sub", text: "הצעות מחיר מאנשי מקצוע מאושרים בלבד. ההצטרפות כפופה לאישור ההנהלה." }),
+            el("p", { cls: "acts" }, [linkBtn("הרשמה כאיש מקצוע", "#/register", true), linkBtn("התחברות", "#/login")])]));
+        } else if (r.viewer === "client") {
+          holder.appendChild(note("הצעות מחיר ושיחות זמינות לאנשי מקצוע מאושרים. את הבקשות שלך אפשר לנהל ב\"הבקשות שלי\"."));
+        } else if (r.viewer === "pending_pro") {
+          holder.appendChild(note("ההצטרפות שלך ממתינה לאישור ההנהלה. לאחר האישור תוכל להציע מחיר ולפתוח שיחה."));
+        } else if (r.viewer === "pro") {
+          if (r.client) holder.appendChild(el("div", { cls: "panel" }, [el("strong", { text: "פרטי המזמין" }), el("p", { text: r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") })]));
+          var kids = [];
+          if (r.status === "open") {
+            if (r.bid_blocked) kids.push(note("כבר הוגשה הצעה ברמה שלך. כדי למנוע גניבת עבודות, מותרת הצעה אחת מכל רמה. אפשר לפתוח שיחה עם המזמין."));
+            else if (r.level_too_high) kids.push(note("הבקשה מיועדת לרמה גבוהה יותר מהרמה שלך."));
+            else {
+              var price = el("input", { placeholder: "מחיר", value: r.my_bid ? r.my_bid.price : "" }), days = el("input", { placeholder: "זמן", value: r.my_bid ? r.my_bid.days : "" }),
+                noteIn = el("input", { placeholder: "הערה", value: r.my_bid ? r.my_bid.note : "" }), m = msgBox();
+              var bb = el("button", { cls: "btn primary", type: "button", text: r.my_bid ? "עדכון ההצעה" : "שליחת הצעה" });
+              bb.addEventListener("click", function () {
+                api("POST", "bids", { request_id: r.id, price: price.value, days: days.value, note: noteIn.value }).then(function (x) {
+                  if (x.ok) { m.textContent = "ההצעה נשמרה."; return; }
+                  m.textContent = x.__status === 409 ? "כבר הוגשה הצעה ברמה שלך." : "נא להזין מחיר.";
+                  if (x.__status === 409) draw();
+                });
+              });
+              kids.push(el("div", { cls: "mk-bidform" }, [price, days, noteIn, bb]), m);
+            }
+          }
+          var cb = el("button", { cls: "btn", type: "button", text: "פתיחת שיחה עם המזמין" + (r.chat && r.chat.unread ? " · חדשות: " + r.chat.unread : "") });
+          cb.addEventListener("click", function () { startChat({ request_id: r.id }, "מזמין · " + r.title); });
+          kids.push(cb);
+          holder.appendChild(el("div", { cls: "panel" }, [el("strong", { text: "הצעה ושיחה" })].concat(kids)));
+        } else if (r.viewer === "owner") {
+          ownerPanels(r, draw).forEach(function (n) { holder.appendChild(n); });
+        }
+      });
     }
     draw();
+  }
+
+  function ownerPanels(r, redraw) {
+    var out = [];
+    function act(label, url, data, confirmText, primary) {
+      var b = el("button", { cls: "btn" + (primary ? " primary" : ""), type: "button", text: label });
+      b.addEventListener("click", function () { if (confirmText && !confirm(confirmText)) return; api("POST", url, data || { request_id: r.id }).then(redraw); });
+      return b;
+    }
+    var st = [el("strong", { text: "סטטוס הבקשה: " }), statusChip(r.status)];
+    var btns = el("div", { cls: "act" });
+    if (r.status === "review") btns.appendChild(note("הבקשה ממתינה לאישור ההנהלה ותפורסם לאחר מכן."));
+    if (r.status === "open") { btns.appendChild(act("מצאתי בעל מקצוע", "requests/found", null, "לסמן שמצאת בעל מקצוע? הבקשה תצא מרשימת הפתוחות.", true)); }
+    if (r.status === "taken") { btns.appendChild(act("מחפש שוב", "requests/reopen", null, "להחזיר את הבקשה לרשימת הפתוחות?")); btns.appendChild(act("העבודה בוצעה", "requests/done", null, "לסמן שהעבודה בוצעה?", true)); }
+    if (r.status === "open") btns.appendChild(act("העבודה כבר בוצעה", "requests/done", null, "לסמן שהעבודה בוצעה?"));
+    if (r.status === "review" || r.status === "open") btns.appendChild(act("סגירת הבקשה", "requests/close", null, "לסגור את הבקשה?"));
+    if (r.status === "done" && r.has_pro && !r.rated) {
+      var stSel = select({ 5: "5 מצוין", 4: "4 טוב מאוד", 3: "3 סביר", 2: "2 חלש", 1: "1 לא מרוצה" }, "5"), tx = el("input", { placeholder: "הערה קצרה (אופציונלי)" });
+      var rb = el("button", { cls: "btn primary", type: "button", text: "שליחת דירוג" });
+      rb.addEventListener("click", function () { api("POST", "rate", { request_id: r.id, stars: Number(stSel.value), text: tx.value }).then(redraw); });
+      btns.appendChild(stSel); btns.appendChild(tx); btns.appendChild(rb);
+    }
+    out.push(el("div", { cls: "panel" }, [el("div", { cls: "who" }, st), btns]));
+
+    var bidsBox = el("div", { cls: "panel" }, [el("strong", { text: "הצעות מחיר (" + (r.bids || []).length + ")" })]);
+    if (!(r.bids || []).length) bidsBox.appendChild(el("p", { cls: "sub", text: "עדיין אין הצעות." }));
+    (r.bids || []).forEach(function (b) {
+      var row = el("div", { cls: "mk-bid" }, [el("div", { cls: "who" }, [avatar(b.pro), el("div", {}, [el("strong", { text: b.pro.name }), el("div", { cls: "sub", text: proLine(b.pro) })])]),
+        b.pro.exp ? el("div", { cls: "sub", text: "ניסיון: " + b.pro.exp }) : null,
+        el("div", {}, [el("b", { text: "מחיר: " + b.price }), document.createTextNode(b.days ? " · זמן: " + b.days : "")]), b.note ? el("div", { text: b.note }) : null]);
+      linksOf(b.pro).forEach(function (a) { row.appendChild(a); });
+      var cb = el("button", { cls: "btn sm", type: "button", text: "שיחה עם " + b.pro.name + (b.chat && b.chat.unread ? " · חדשות: " + b.chat.unread : "") });
+      cb.addEventListener("click", function () { startChat({ request_id: r.id, pro_id: b.pro.id }, b.pro.name + " · " + r.title); });
+      var acts = el("div", { cls: "act" }, [cb]);
+      if (b.chosen) acts.appendChild(el("span", { cls: "mk-ok", text: "נבחר. ליצירת קשר: " + (b.pro.email || "") }));
+      else if (r.status === "open") acts.appendChild(act("בחירה בהצעה", "requests/choose", { request_id: r.id, bid_id: b.id }, "לבחור בהצעה הזאת? פרטי הקשר שלך יועברו אליו."));
+      row.appendChild(acts);
+      bidsBox.appendChild(row);
+    });
+    out.push(bidsBox);
+
+    var chatsBox = el("div", { cls: "panel" }, [el("strong", { text: "שיחות עם בעלי מקצוע (" + (r.chats || []).length + ")" })]);
+    if (!(r.chats || []).length) chatsBox.appendChild(el("p", { cls: "sub", text: "בעלי מקצוע שיפתחו שיחה על הבקשה יופיעו כאן." }));
+    (r.chats || []).forEach(function (c) {
+      var row = el("button", { type: "button", cls: "cm-row" }, [avatar({ name: c.name, photo: c.photo }),
+        el("span", { cls: "cm-txt" }, [el("strong", { text: c.name }), el("span", { cls: "meta", text: c.last })]),
+        c.unread ? el("span", { cls: "cm-badge", text: String(c.unread) }) : null]);
+      row.addEventListener("click", function () { openChat(c.id, c.name + " · " + r.title); });
+      chatsBox.appendChild(row);
+    });
+    out.push(chatsBox);
+    return out;
   }
 
   // ---- new request
   function newRequestPage(preCat) {
     if (!me || me.role !== "client") return root.appendChild(note("פרסום בקשה זמין למבקשים רשומים."));
-    root.appendChild(crumbs([{ text: "הלוח", href: "#/" }, { text: "בקשה חדשה" }]));
-    root.appendChild(pageTitle("בקשה חדשה"));
+    root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה חדשה" }]));
     var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 6, maxLength: 3000 }), cat = select(meta.cats, meta.cats[preCat] ? preCat : "software"),
       lvl = select(meta.levels, "any", "לא משנה"), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
@@ -487,27 +516,22 @@
           else m.textContent = r.__status === 429 ? "הגעת למכסה היומית." : "נא למלא כותרת ותיאור (לפחות 10 תווים).";
         });
     });
-    root.appendChild(el("div", { cls: "form" }, [field("כותרת", title), field("מה צריך", desc), field("תחום", cat), field("רמה רצויה", lvl), field("גודל העבודה", size),
-      field("תקציב", budget), field("איך ליצור קשר", contact), field("תיוג מפתח מסוים", tag),
-      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m,
-      el("p", { cls: "sub", text: "הבקשה תופיע לאנשי המקצוע לאחר אישור ההנהלה." })]));
+    root.appendChild(el("div", { cls: "formcard" }, [el("h1", { text: "בקשה חדשה" }), el("p", { cls: "sub", text: "תאר מה צריך. הבקשה תופיע בלוח לאחר אישור ההנהלה, ופרטי הקשר שלך יימסרו רק למי שתבחר." }),
+      field("כותרת", title), field("מה צריך", desc), el("div", { cls: "two" }, [field("תחום", cat), field("רמה רצויה", lvl)]),
+      el("div", { cls: "two" }, [field("גודל העבודה", size), field("תקציב", budget)]), field("איך ליצור קשר", contact), field("תיוג מפתח מסוים", tag),
+      el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m]));
   }
 
   // ---- account pages
   function myRequestsPage() {
     root.appendChild(pageTitle("הבקשות שלי", [linkBtn("בקשה חדשה", "#/new", true)]));
     var holder = el("div"); root.appendChild(holder);
-    api("GET", "my/requests").then(function (rows) { holder.appendChild(requestRows(Array.isArray(rows) ? rows : [], true)); });
-  }
-  function openPage() {
-    root.appendChild(pageTitle("בקשות פתוחות"));
-    var holder = el("div"); root.appendChild(holder);
-    api("GET", "board").then(function (b) { holder.appendChild(requestRows(b.open || [], true)); });
+    api("GET", "my/requests").then(function (rows) { holder.appendChild(rowsBox(Array.isArray(rows) ? rows : [], "עדיין לא פרסמת בקשות.")); });
   }
   function minePage() {
     root.appendChild(pageTitle("העבודות שלי"));
     var holder = el("div"); root.appendChild(holder);
-    api("GET", "board").then(function (b) { holder.appendChild(requestRows(b.mine || [], true)); });
+    api("GET", "board").then(function (b) { holder.appendChild(rowsBox(b.mine || [], "עדיין לא נבחרת לעבודה.")); });
   }
   function simplePage(title, node) { root.appendChild(pageTitle(title)); root.appendChild(node); }
 
@@ -519,11 +543,11 @@
     box.textContent = "";
     clearInterval(badgeTimer);
     if (!me) {
-      box.appendChild(el("a", { href: "#/login", text: "התחברות" })); box.appendChild(el("a", { href: "#/register", text: "הרשמה" }));
+      box.appendChild(el("a", { href: "#/login", text: "התחברות" })); box.appendChild(el("a", { cls: "hbtn", href: "#/register", text: "הרשמה" }));
       return;
     }
     var links = me.role === "client" ? [["requests", "הבקשות שלי"], ["new", "בקשה חדשה"], ["messages", "הודעות"], ["partners", "שותפים"]]
-      : me.status === "active" ? [["open", "בקשות פתוחות"], ["mine", "העבודות שלי"], ["messages", "הודעות"], ["profile", "הפרופיל"], ["partners", "שותפים"]]
+      : me.status === "active" ? [["mine", "העבודות שלי"], ["messages", "הודעות"], ["profile", "הפרופיל"], ["partners", "שותפים"]]
       : [["profile", "הפרופיל"]];
     var msgLink = null, badge = el("span", { cls: "badge" });
     links.forEach(function (l) {
@@ -550,14 +574,14 @@
     root.textContent = "";
     renderHeader();
     var parts = location.hash.replace(/^#\/?/, "").split("/"), p0 = parts[0] || "";
-    var needLogin = ["requests", "new", "open", "mine", "messages", "profile", "partners"];
+    var needLogin = ["requests", "new", "mine", "messages", "profile", "partners"];
     if (!me && needLogin.indexOf(p0) >= 0) return root.appendChild(authView("login"));
     if (p0 === "login" || p0 === "register") return me ? go("") : root.appendChild(authView(p0 === "register" ? "reg" : "login"));
-    if (p0 === "c") return categoryPage(parts[1]);
+    if (p0 === "c") return feedPage(meta.cats[parts[1]] ? parts[1] : "");
     if (p0 === "r") return requestPage(parts[1]);
     if (p0 === "new") return newRequestPage(parts[1]);
     if (p0 === "requests") return myRequestsPage();
-    if (p0 === "open") return openPage();
+    if (p0 === "open") return go("");
     if (p0 === "mine") return minePage();
     if (p0 === "messages") return simplePage("הודעות", chatsStrip(true));
     if (p0 === "partners") return simplePage("תוכנית שותפים", partnerBox());
@@ -565,7 +589,7 @@
     if (p0 === "pros") return simplePage("אנשי מקצוע", prosList());
     if (p0 === "pro") { root.appendChild(proPage(parts[1])); return; }
     if (me && me.role === "pro" && me.status !== "active") root.appendChild(note("בקשת ההצטרפות שלך התקבלה. ההנהלה בודקת את הפרטים ותאשר ידנית. בינתיים אפשר להשלים את הפרופיל."));
-    homePage();
+    feedPage("");
   }
   window.addEventListener("hashchange", function () { load(); });
   function load() { api("GET", "me").then(function (r) { me = r.user || null; route(); }); }

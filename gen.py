@@ -158,8 +158,8 @@ write("/android/", a)
 sh = head("חנות | כושר טק", "מנגני אנדרואיד ומוצרים נוספים.", "/shop/")
 sh += f'''<section class="pagehead"><div class="wrap"><h1>חנות</h1><p>מוצרים שנבחרו בקפידה. התשלום והמסירה נעשים בתיאום ישיר.</p></div></section>
 <section class="block"><div class="wrap"><div class="grid c3" id="products">
-<article class="card"><div class="ico">{ICONS["phone"]}</div><h3>נגן אנדרואיד M393</h3><p>נגן עם אנדרואיד 13, מותאם אישית לפי בקשה.</p><p><span class="stock">אזל מהמלאי</span></p><a class="btn ghost" style="color:var(--green)" href="/contact/">עדכנו אותי כשיחזור</a></article>
-<article class="card"><div class="ico">{ICONS["box"]}</div><h3>דגמים נוספים</h3><p>יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.</p><p><span class="price" data-svc="shop">לפי דגם</span></p><a class="link" href="/contact/">לבירור ←</a></article>
+<article class="card"><div class="ico">{ICONS["phone"]}</div><h3>נגן אנדרואיד M393</h3><p>נגן עם אנדרואיד 13, מותאם אישית לפי בקשה.</p><p><span class="stock">אזל מהמלאי</span></p><a class="btn ghost" style="color:var(--green)" href="/contact/?product=נגן אנדרואיד M393">עדכנו אותי כשיחזור</a></article>
+<article class="card"><div class="ico">{ICONS["box"]}</div><h3>דגמים נוספים</h3><p>יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.</p><p><span class="price" data-svc="shop">לפי דגם</span></p><a class="link" href="/contact/?product=דגמים נוספים">לבירור ←</a></article>
 </div>
 <div class="note" style="margin-top:24px">התשלום אינו מתבצע באתר. אחרי יצירת קשר נתאם הכול ישירות.</div></div></section>
 '''
@@ -225,6 +225,7 @@ ma += '''<div id="login" class="box" hidden style="max-width:360px;margin:8vh au
 <button class="btn primary" id="go" type="button" style="margin-top:10px;width:100%">כניסה</button><div id="loginmsg" role="status" class="meta" style="margin-top:8px"></div></div>
 <div id="app" hidden>
 <div class="ptitle"><h1>ניהול הלוח</h1><button class="btn sm" id="out" type="button">יציאה</button></div>
+<section id="boardbox" class="box" hidden></section>
 <nav class="tabs" role="tablist">
 <button data-tab="users" class="on">משתמשים <span id="ucount"></span></button><button data-tab="mreq">בקשות <span id="rcount"></span></button>
 <button data-tab="partners">שותפים <span id="pcount"></span></button><button data-tab="est">הערכת מחיר</button></nav>
@@ -233,11 +234,31 @@ ma += '''<div id="login" class="box" hidden style="max-width:360px;margin:8vh au
 <section class="panel" id="p-partners"><div id="clist"></div></section>
 <section class="panel" id="p-est"><div id="elist"></div><div class="act"><button class="btn primary" id="saveest" type="button">שמירה</button></div></section>
 </div><div id="status" role="status" aria-live="polite"></div>
-<script src="/admin/nav.js"></script>
 <script src="@@JS@@"></script>
-'''.replace("@@JS@@", V("assets/market-admin.js")).replace("/admin/nav.js", V("admin/nav.js"))
+<script src="@@INBOX@@"></script>
+'''.replace("@@JS@@", V("assets/market-admin.js")).replace("@@INBOX@@", V("assets/market-inbox.js"))
 ma += ffoot()
 write("/market/admin/", ma)
+
+# ---------- HUB: one private page with a button to every group (not linked from anywhere) ----------
+HUB = [
+ ("האתר הפרטי (כושר טק)", [("האתר", "/"), ("ניהול האתר", "/admin/")]),
+ ("הצ'אט של הוועד", [("הצ'אט", "/chat/"), ("כניסת מנהל-על", "/chat/#/dev")]),
+ ("הפורום", [("הפורום", "/market/"), ("ניהול הפורום", "/market/admin/")]),
+ ("השרת", [("שולחן עבודה", "/desktop/"), ("ניהול השרת", "/panel/")]),
+]
+hb = '''<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>כל המקומות</title>
+<style>body{margin:0;font-family:system-ui,"Segoe UI",Arial,sans-serif;background:#f3f4f6;color:#1f2937;line-height:1.6}
+main{max-width:760px;margin:0 auto;padding:28px 16px}h1{margin:0 0 18px;font-size:1.5rem}
+section{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:1.05rem;color:#4b5563}.b{display:flex;gap:10px;flex-wrap:wrap}
+a{display:inline-block;padding:10px 20px;border-radius:8px;background:#1f2937;color:#fff;text-decoration:none;font-weight:600}
+a:hover{background:#374151}</style></head><body><main><h1>כל המקומות</h1>'''
+for _t, _ls in HUB:
+    hb += "<section><h2>%s</h2><div class='b'>%s</div></section>" % (html.escape(_t), "".join('<a href="%s">%s</a>' % (_h, html.escape(_n)) for _n, _h in _ls))
+hb += "</main></body></html>"
+write("/hub/", hb)
 
 # ---------- RULES ----------
 RULES = [
@@ -341,6 +362,7 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
 <script>
 (function(){{
   var f=document.getElementById('cf'),m=document.getElementById('formmsg');
+  try{{var pr=new URLSearchParams(location.search).get('product');if(pr){{pr=pr.slice(0,60);var o=document.createElement('option');o.value='הזמנה: '+pr;o.textContent='הזמנה: '+pr;f.subject.insertBefore(o,f.subject.firstChild);f.subject.selectedIndex=0;if(!f.message.value)f.message.value='אני מעוניין ב'+pr+'. ';}}}}catch(e){{}}
   try{{var q=new URLSearchParams(location.search).get('subject');if(q){{for(var i=0;i<f.subject.options.length;i++){{if(f.subject.options[i].value===q||f.subject.options[i].text===q){{f.subject.selectedIndex=i}}}}}}}}catch(e){{}}
   f.addEventListener('submit',function(e){{
     e.preventDefault();
@@ -362,7 +384,7 @@ _ap = os.path.join(OUT, "admin", "index.html")
 if os.path.exists(_ap):
     with open(_ap, encoding="utf-8") as _f:
         _h = _f.read()
-    for _name in ("assets/style.css", "admin/board.js", "admin/nav.js"):
+    for _name in ("assets/style.css",):
         _h = re.sub(r'(["\'])/%s(\?v=[0-9a-f]+)?\1' % re.escape(_name), lambda m: m.group(1) + V(_name) + m.group(1), _h)
     with open(_ap, "w", encoding="utf-8") as _f:
         _f.write(_h)
