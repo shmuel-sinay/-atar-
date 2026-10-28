@@ -24,8 +24,9 @@
     var reqs = d.requests.filter(function (r) { return r.status === "review"; });
     var pros = d.users.filter(function (u) { return u.role === "pro" && u.status === "pending"; });
     var photos = d.users.filter(function (u) { return u.role === "pro" && u.photo === 1; });
+    var covers = d.users.filter(function (u) { return u.role === "pro" && u.cover === 1; });
     var credits = [];
-    var total = reqs.length + pros.length + photos.length + credits.length;
+    var total = reqs.length + pros.length + photos.length + covers.length + credits.length;
     box.hidden = false; box.textContent = "";
     var head = el("div", { cls: "act", style: "justify-content:space-between;margin:0" }, [el("strong", { text: total ? total + " דברים ממתינים לאישור שלך" : "אין כרגע דבר שממתין לאישור" }),
       btn("פרסום בקשה בשם לקוח", function () { window.forwardToBoard({}); })]);
@@ -69,6 +70,12 @@
         btn("אישור תמונה", function () { call("POST", "photo", { id: u.id, ok: true }).then(after); }),
         btn("הסרה", function () { call("POST", "photo", { id: u.id, ok: false }).then(after); }, true)]);
     });
+    covers.forEach(function (u) {
+      var img = el("img", { cls: "pend-photo wide", alt: "הרקע של " + u.name, src: "/api/admin/m/cover/" + u.id + "?t=" + Date.now() });
+      card("תמונת רקע חדשה של " + u.name, [el("div", { cls: "meta", text: (u.field || "") + " · " + u.email }), img], [
+        btn("אישור רקע", function () { call("POST", "cover", { id: u.id, ok: true }).then(after); }),
+        btn("הסרה", function () { call("POST", "cover", { id: u.id, ok: false }).then(after); }, true)]);
+    });
     credits.forEach(function (c) {
       row("תגמול שותף: " + c.partner + " · " + c.amount + " " + d.unit, [
         btn("אישור", function () { call("POST", "credit", { id: c.id, status: "approved" }).then(after); }),
@@ -106,4 +113,20 @@
     if (!document.getElementById("app").hidden) { refresh(); setInterval(refresh, 60000); return; }
     if (++tries < 200) setTimeout(wait, 300);
   })();
+})();
+
+(function () {
+  // click a member photo in board admin to see the whole picture
+  document.addEventListener("click", function (e) {
+    var img = e.target.closest && e.target.closest("img.pend-photo, img.thumb");
+    if (!img) return;
+    var wrap = document.createElement("div"); wrap.className = "lightbox";
+    var big = document.createElement("img"); big.src = img.src; big.alt = img.alt || "";
+    var x = document.createElement("button"); x.type = "button"; x.className = "lb-x"; x.textContent = "×"; x.setAttribute("aria-label", "סגירה");
+    wrap.appendChild(big); wrap.appendChild(x); document.body.appendChild(wrap); x.focus();
+    function close() { wrap.remove(); document.removeEventListener("keydown", key); }
+    function key(ev) { if (ev.key === "Escape") close(); }
+    wrap.addEventListener("click", function (ev) { if (ev.target !== big) close(); });
+    document.addEventListener("keydown", key);
+  });
 })();
