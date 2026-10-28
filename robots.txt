@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /hub/
+Disallow: /market/
+Disallow: /chat/
+Disallow: /api/
+Sitemap: https://kosher-tek.com/sitemap.xml

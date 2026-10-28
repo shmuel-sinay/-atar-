@@ -31,12 +31,19 @@ DEFAULT = {
     "services": {"android": "מחיר סימלי", "computers": "מחיר סימלי", "software": "מחיר סימלי",
                  "websites": "מחיר סימלי", "shop": "לפי דגם", "request": "מחיר אוטומטי"},
     "products": [
-        {"id": "m393", "name": "נגן אנדרואיד M393", "desc": "נגן עם אנדרואיד 13, מותאם אישית לפי בקשה.",
-         "price": "", "status": "out", "image": "", "visible": True},
+        {"id": "m393", "name": "נגן הכינור",
+         "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מותאם ומסונן לפי בחירתך.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nWiFi, Bluetooth 5.0 ורדיו FM\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
+         "price": "", "status": "out", "image": "/assets/products/kinor-set.jpg",
+         "gallery": ["/assets/products/kinor-set.jpg", "/assets/products/kinor-front.jpg"], "visible": True},
+        {"id": "m36plus", "name": "נגן הנבל",
+         "desc": "נגן אנדרואיד עם מצלמה ופנס, מגיע מותאם ומסונן לפי בחירתך.\n32GB אחסון\nכרטיס זיכרון\nמצלמה ופנס (אפשר גם בלי מצלמה)\nכפתור ייעודי בצד המכשיר",
+         "price": "", "status": "order", "image": "/assets/products/nevel-back.jpg",
+         "gallery": ["/assets/products/nevel-back.jpg"], "visible": True},
         {"id": "other", "name": "דגמים נוספים", "desc": "יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.",
          "price": "לפי דגם", "status": "order", "image": "", "visible": True},
     ],
 }
+CATALOG = 2  # bump to roll new default products into an existing data file
 
 def secret():
     os.makedirs(DIR, exist_ok=True)
@@ -57,6 +64,19 @@ def load_data():
     d.setdefault("services", {}); d.setdefault("products", [])
     for k, v in DEFAULT["services"].items():
         d["services"].setdefault(k, v)
+    if d.get("catalog", 0) < CATALOG:
+        # new built-in products replace the old ones with the same id; stock and price set in the admin panel stay
+        old = {p.get("id"): p for p in d["products"]}
+        fresh = []
+        for p in DEFAULT["products"]:
+            q = dict(p)
+            if p["id"] in old:
+                q["status"] = old[p["id"]].get("status", q["status"])
+                q["price"] = old[p["id"]].get("price") or q["price"]
+            fresh.append(q)
+        ids = {p["id"] for p in fresh}
+        d["products"] = fresh + [p for p in d["products"] if p.get("id") not in ids]
+        d["catalog"] = CATALOG
     return d
 
 def save_data(d):
@@ -76,11 +96,13 @@ def clean_products(items):
             continue
         status = p.get("status") if p.get("status") in ("in", "out", "order") else "in"
         img = clip(p.get("image"), 200)
-        if img and not img.startswith("/uploads/"):
+        if img and not (img.startswith("/uploads/") or img.startswith("/assets/products/")):
             img = ""
+        gal = [clip(x, 200) for x in (p.get("gallery") or [])[:8] if isinstance(x, str)]
+        gal = [x for x in gal if x.startswith("/uploads/") or x.startswith("/assets/products/")]
         out.append({"id": clip(p.get("id"), 40) or uuid.uuid4().hex[:8], "name": clip(p.get("name"), 120),
                     "desc": clip(p.get("desc"), 600), "price": clip(p.get("price"), 60), "status": status,
-                    "image": img, "visible": bool(p.get("visible", True))})
+                    "image": img, "gallery": gal, "visible": bool(p.get("visible", True))})
     return out
 
 def clean_services(d):
