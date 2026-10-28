@@ -906,7 +906,7 @@ def sys_client(c):
         return u["id"]
     import secrets
     cur = c.execute("INSERT INTO users(email,name,pw,role,status,created,ref_code) VALUES(?,?,?,?,?,?,?)",
-                    ("system@kosher-tek.local", "כושר טק (בשם לקוח)", hash_pw(secrets.token_hex(16)), "client", "active", int(time.time()), new_code(c)))
+                    ("system@kosher-tek.local", "כשר טק (בשם לקוח)", hash_pw(secrets.token_hex(16)), "client", "active", int(time.time()), new_code(c)))
     return cur.lastrowid
 
 
