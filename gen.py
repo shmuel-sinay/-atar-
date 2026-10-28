@@ -186,7 +186,7 @@ def fhead(title, path):
 </head>
 <body class="forum">
 <header class="fbar"><div class="fwrap">
-  <a class="fbrand" href="/market/">{FORUM}</a>
+  <a class="fbrand" href="/market/"><img src="{V("assets/forum-icon.svg")}" alt="" width="32" height="32">{FORUM}</a>
   <nav><a href="/market/"{' aria-current="page"' if path == "/market/" else ""}>הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/"{' aria-current="page"' if path == "/market/rules/" else ""}>כללי הלוח</a></nav>
   <div id="fuser" class="fuser"></div>
 </div></header>

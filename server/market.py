@@ -929,6 +929,17 @@ def admin_route(h, method, sub):
             else:
                 drop_photo(uid)
             return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "request/edit":
+            rid = int(d.get("id") or 0)
+            title, desc = clip(d.get("title"), 120), clip(d.get("desc"), 3000)
+            if len(title) < 2 or len(desc) < 2:
+                return h.reply(400, {"error": "fields"})
+            cat = d.get("category") if d.get("category") in CATS else "other"
+            lvl = d.get("level") if d.get("level") in LEVEL_RANK or d.get("level") == "any" else "any"
+            size = d.get("size") if d.get("size") in SIZES else "small"
+            c.execute("UPDATE requests SET title=?, descr=?, category=?, level=?, size=?, budget=? WHERE id=?",
+                      (title, desc, cat, lvl, size, clip(d.get("budget"), 60), rid))
+            return h.reply(200, {"ok": True})
         if method == "POST" and sub == "request":
             if d.get("status") not in STATUS_REQ:
                 return h.reply(400, {"error": "bad"})
