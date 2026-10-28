@@ -37,12 +37,11 @@
     var Q = [
       { k: "use", q: "בשביל מה הנגן?", hint: "אפשר לבחור כמה תשובות.", multi: true, opts: [
         ["shiurim", "לשמוע שיעורים"], ["music", "לשמוע שירים וניגונים"], ["learn", "לחזור על לימוד"],
-        ["child", "בשביל ילד"], ["record", "להקליט"], ["light", "גם כפנס או למצלמה"]] },
-      { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["yes", "כן, גם לראות"]] },
+        ["child", "בשביל ילד"], ["record", "להקליט"], ["apps", "משחקים או תוכנות מסוימות שעובדות בלי אינטרנט"], ["light", "גם כפנס או למצלמה"]] },
+      { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["own", "רק סרטונים שאצלם בעצמי במכשיר"], ["yes", "כן, גם סרטונים מבחוץ"]] },
       { k: "add", q: "תרצה להוסיף לו תוכנות בעתיד?", hint: "\"תוכנה\" כאן היא כל דבר שמוסיפים לנגן: למשל ספר שיעורים, לוח זמנים, או משהו לעבודה.", opts: [
         ["none", "לא, מספיק לי מה שיש בו"], ["safe", "כן, אבל רק מרשימה בטוחה שבדקתם"], ["any", "כן, גם דברים שאביא בעצמי"]] },
-      { k: "cam", q: "צריך מצלמה או פנס?", opts: [["no", "לא צריך"], ["light", "רק פנס"], ["cam", "כן, מצלמה"]] },
-      { k: "space", q: "כמה שיעורים ושירים תרצה לשמור בו?", opts: [["some", "כמה מאות, בסדר גמור"], ["lots", "הרבה מאוד"]] }
+      { k: "cam", q: "צריך מצלמה או פנס?", opts: [["no", "לא צריך"], ["light", "רק פנס"], ["cam", "כן, מצלמה"]] }
     ];
     var TIER = { none: "שמור", safe: "שמור עם חנות פנימית", any: "עם התקנה מבחוץ" };
     function draw() {
@@ -74,8 +73,10 @@
     }
     function result() {
       var use = ans.use || [];
-      var plus = ans.cam === "cam" || ans.cam === "light" || ans.space === "lots" || use.indexOf("light") >= 0;
+      var plus = ans.cam === "cam" || ans.cam === "light" || ans.video === "own" || use.indexOf("light") >= 0;
       var player = plus ? "הזמיר פלוס" : "הזמיר", tier = TIER[ans.add] || "שמור";
+      var wantsApps = use.indexOf("apps") >= 0;
+      if (wantsApps && tier === "שמור") tier = "שמור עם חנות פנימית";
       if (use.indexOf("child") >= 0 && ans.add === "any") tier = "שמור עם חנות פנימית";
       var r = el("div", "qres");
       r.appendChild(el("span", "qlabel", "ההמלצה שלנו"));
@@ -85,12 +86,14 @@
       why.appendChild(el("li", null, tier === "שמור" ? "ברמה השמורה יש רק מה שצריך: נגן, רדיו, הקלטה ושיעורים. אי אפשר להוסיף שום דבר, ולכן אין מה לעקוף." :
         tier === "שמור עם חנות פנימית" ? "אפשר להוסיף תוכנות, אבל רק מתוך רשימה שאנחנו בדקנו ואישרנו." : "אפשר להוסיף גם דברים מבחוץ, ועדיין אין בו אינטרנט ואין בו סרטים."));
       if (use.indexOf("child") >= 0 && ans.add === "any") why.appendChild(el("li", null, "לילד אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
-      if (ans.video === "yes") why.appendChild(el("li", "qwarn", "סרטונים לא יהיו: אין אצלנו נגנים עם סרטים, וזה בכוונה. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו."));
-      why.appendChild(el("li", null, "בכל מקרה: בלי אינטרנט ובלי סרטים, ואפשר לשנות רמה גם אחר כך."));
+      if (wantsApps) why.appendChild(el("li", null, "משחקים ותוכנות שעובדים בלי אינטרנט מוסיפים מתוך הרשימה הבטוחה שלנו" + (ans.add === "any" ? ", או מבחוץ לפי בחירתך." : ".")));
+      if (ans.video === "own") why.appendChild(el("li", null, "אפשר לבדוק גרסה שמאפשרת לראות רק סרטונים שצולמו במכשיר עצמו, בלי שום אפשרות להכניס סרטים מבחוץ. נבדוק את זה איתך בהזמנה."));
+      if (ans.video === "yes") why.appendChild(el("li", "qwarn", "סרטונים מבחוץ לא יהיו: אין אצלנו נגנים כאלה, וזה בכוונה. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו."));
+      why.appendChild(el("li", null, "בכל מקרה: בלי אינטרנט ובלי אפשרות להכניס סרטים, ואפשר לשנות רמה גם אחר כך."));
       r.appendChild(why);
       var acts = el("div", "qnav");
       var go = el("a", "btn primary", "להזמנה עם ההתאמה הזאת");
-      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier);
+      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
       var again = el("button", "btn ghost", "להתחיל מחדש"); again.type = "button";
       again.addEventListener("click", function () { ans = {}; step = 0; draw(); });
       acts.appendChild(go); acts.appendChild(again); r.appendChild(acts);
