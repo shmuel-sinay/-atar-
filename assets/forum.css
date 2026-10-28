@@ -303,3 +303,8 @@ section.panel[id^="p-"].on{display:block}
 .linkrow{display:flex;gap:8px;flex-wrap:wrap}
 .linkrow input{flex:1;min-width:220px;direction:ltr;text-align:left}
 .stats.three{grid-template-columns:repeat(3,1fr)}
+.panel.tabbed{gap:14px}
+.ptabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 0}
+.ptabs button{border:0;background:none;font:inherit;font-family:var(--serif);font-size:1.08rem;font-weight:700;color:var(--soft);padding:6px 14px 10px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center}
+.ptabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
+.tabbody{display:grid;gap:10px}

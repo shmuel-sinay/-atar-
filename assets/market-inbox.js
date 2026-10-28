@@ -35,12 +35,12 @@
     reqs.forEach(function (r) {
       row("בקשה חדשה: " + r.title + " (" + (labels.cats[r.category] || "") + ") מאת " + r.client.name, [
         btn("אישור ופרסום", function () { call("POST", "request", { id: r.id, status: "open" }).then(after); }),
-        btn("דחייה", function () { if (confirm("לדחות את הבקשה?")) call("POST", "request", { id: r.id, status: "closed" }).then(after); }, true)]);
+        btn("דחייה", function () { ktAsk("לדחות את הבקשה?", { danger: true }).then(function (ok) { if (ok) call("POST", "request", { id: r.id, status: "closed" }).then(after); }); }, true)]);
     });
     pros.forEach(function (u) {
       row("בקשת הצטרפות: " + u.name + " · " + (u.field || ""), [
         btn("אישור", function () { call("POST", "user", { id: u.id, status: "active" }).then(after); }),
-        btn("חסימה", function () { if (confirm("לחסום?")) call("POST", "user", { id: u.id, status: "blocked" }).then(after); }, true)]);
+        btn("חסימה", function () { ktAsk("לחסום?", { danger: true }).then(function (ok) { if (ok) call("POST", "user", { id: u.id, status: "blocked" }).then(after); }); }, true)]);
     });
     photos.forEach(function (u) {
       row("תמונה חדשה של " + u.name, [

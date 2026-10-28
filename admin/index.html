@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>ניהול | כושר טק</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<script src="/assets/ask.js?v=525f939b" defer></script>
 <link rel="stylesheet" href="/assets/style.css?v=69ec5033">
 <style>
 [hidden]{display:none!important}
@@ -134,7 +135,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold-soft);borde
         el("label", { text: " מוצג באתר" }, []),
         btn("▲", function () { move(idx, -1); }), btn("▼", function () { move(idx, 1); }),
         btn("הסרת תמונה", function () { p.image = ""; renderProducts(); }),
-        btn("מחיקה", function () { if (confirm("למחוק את \"" + (p.name || "המוצר") + "\"?")) { data.products.splice(idx, 1); renderProducts(); } }, true)
+        btn("מחיקה", function () { ktAsk("למחוק את \"" + (p.name || "המוצר") + "\"?", { ok: "מחיקה", danger: true }).then(function (ok) { if (ok) { data.products.splice(idx, 1); renderProducts(); } }); }, true)
       ]);
       acts.firstChild.insertBefore(vis, acts.firstChild.firstChild);
       box.appendChild(el("div", { cls: "box" }, [
@@ -180,8 +181,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold-soft);borde
       var who = el("div", { cls: "meta", text: (m.name || "") + "  ·  " + (m.contact || "") });
       box.appendChild(el("div", { cls: "box" }, [head, who, el("p", { cls: "msg", text: m.message || "" }),
         el("div", { cls: "act" }, [btn("מחיקה", function () {
-          if (!confirm("למחוק את ההודעה?")) return;
-          api("POST", "/api/admin/messages/delete", { ids: [m.id] }).then(loadMessages);
+          ktAsk("למחוק את ההודעה?", { ok: "מחיקה", danger: true }).then(function (ok) { if (ok) api("POST", "/api/admin/messages/delete", { ids: [m.id] }).then(loadMessages); });
         }, true)])]));
     });
     if (!list.length) box.appendChild(el("p", { cls: "meta", text: "אין הודעות." }));

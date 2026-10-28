@@ -39,7 +39,13 @@
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   var drawer = null, pulling = null;
-  function closeChat() { if (drawer) { drawer.remove(); drawer = null; } clearInterval(pulling); }
+  var afterChat = null, badgePoll = null;
+  function closeChat() {
+    var was = !!drawer;
+    if (drawer) { drawer.remove(); drawer = null; }
+    clearInterval(pulling);
+    if (was) { if (afterChat) afterChat(); if (badgePoll) badgePoll(); }
+  }
   function openChat(id, title) {
     closeChat();
     var list = el("div", { cls: "cm-list" }), inp = el("input", { placeholder: "הודעה...", maxLength: 1000 });
@@ -52,6 +58,7 @@
         if (!Array.isArray(rows) || !rows.length) return;
         rows.forEach(function (msg) { last = Math.max(last, msg.id); list.appendChild(el("div", { cls: "cm-b " + (msg.mine ? "mine" : "theirs"), text: msg.text })); });
         list.scrollTop = list.scrollHeight;
+        if (badgePoll) badgePoll();
       });
     }
     function sendMsg() {
@@ -113,6 +120,7 @@
       });
     }
     var timer = setInterval(load, 15000);
+    if (always) afterChat = load;
     setTimeout(load, 0);
     return box;
   }
@@ -413,6 +421,7 @@
     root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה" }]));
     var holder = el("div");
     root.appendChild(holder);
+    afterChat = function () { draw(); };
     function draw() {
       api("GET", "requests/" + id).then(function (r) {
         holder.textContent = "";
@@ -482,7 +491,7 @@
     var out = [];
     function act(label, url, data, confirmText, primary) {
       var b = el("button", { cls: "btn" + (primary ? " primary" : ""), type: "button", text: label });
-      b.addEventListener("click", function () { if (confirmText && !confirm(confirmText)) return; api("POST", url, data || { request_id: r.id }).then(redraw); });
+      b.addEventListener("click", function () { (confirmText ? ktAsk(confirmText, { ok: label }) : Promise.resolve(true)).then(function (ok) { if (ok) api("POST", url, data || { request_id: r.id }).then(redraw); }); });
       return b;
     }
     var btns = el("div", { cls: "vstack" });
@@ -499,7 +508,7 @@
     }
     out.push(el("div", { cls: "scard" }, [el("h3", { text: "ניהול הבקשה" }), btns]));
 
-    var bidsBox = el("div", { cls: "panel" }, [el("h3", { text: "הצעות מחיר (" + (r.bids || []).length + ")" })]);
+    var bidsBox = el("div", { cls: "tabbody" });
     if (!(r.bids || []).length) bidsBox.appendChild(el("p", { cls: "sub", text: "עדיין אין הצעות. אנשי מקצוע יראו את הבקשה ויגישו הצעות כאן." }));
     (r.bids || []).forEach(function (b) {
       var row = el("div", { cls: "mk-bid" + (b.chosen ? " chosen" : "") }, [el("div", { cls: "bidtop" }, [
@@ -516,10 +525,8 @@
       row.appendChild(acts);
       bidsBox.appendChild(row);
     });
-    out.push(bidsBox);
-
-    var chatsBox = el("div", { cls: "panel" }, [el("h3", { text: "שיחות עם בעלי מקצוע (" + (r.chats || []).length + ")" })]);
-    if (!(r.chats || []).length) chatsBox.appendChild(el("p", { cls: "sub", text: "בעלי מקצוע שיפתחו שיחה על הבקשה יופיעו כאן." }));
+    var chatsBox = el("div", { cls: "tabbody" });
+    if (!(r.chats || []).length) chatsBox.appendChild(el("p", { cls: "sub", text: "עדיין אין שיחות. אפשר לפתוח שיחה מתוך כל הצעה, ובעלי מקצוע יכולים לכתוב לך גם בלי להגיש הצעה." }));
     (r.chats || []).forEach(function (c) {
       var row = el("button", { type: "button", cls: "cm-row" }, [avatar({ name: c.name, photo: c.photo }),
         el("span", { cls: "cm-txt" }, [el("strong", { text: c.name }), el("span", { cls: "meta", text: c.last })]),
@@ -527,7 +534,21 @@
       row.addEventListener("click", function () { openChat(c.id, c.name + " · " + r.title); });
       chatsBox.appendChild(row);
     });
-    out.push(chatsBox);
+    var unread = (r.chats || []).reduce(function (n, c) { return n + (c.unread || 0); }, 0);
+    var tabsKey = "mk_tab_" + r.id, cur = "bids";
+    try { cur = sessionStorage.getItem(tabsKey) || "bids"; } catch (e) {}
+    var bar = el("div", { cls: "ptabs", role: "tablist" }), panel = el("div", { cls: "panel tabbed" }, [bar]);
+    function show(k) {
+      cur = k; try { sessionStorage.setItem(tabsKey, k); } catch (e) {}
+      Array.prototype.forEach.call(bar.children, function (b) { var on = b.dataset.k === k; b.className = on ? "on" : ""; b.setAttribute("aria-selected", on ? "true" : "false"); });
+      bidsBox.hidden = k !== "bids"; chatsBox.hidden = k !== "chats";
+    }
+    [["bids", "הצעות מחיר", (r.bids || []).length, 0], ["chats", "שיחות", (r.chats || []).length, unread]].forEach(function (t) {
+      var b = el("button", { type: "button", role: "tab" }, [document.createTextNode(t[1] + " (" + t[2] + ")"), t[3] ? el("span", { cls: "badge", text: String(t[3]) }) : null]);
+      b.dataset.k = t[0]; b.addEventListener("click", function () { show(t[0]); }); bar.appendChild(b);
+    });
+    panel.appendChild(bidsBox); panel.appendChild(chatsBox); show(cur);
+    out.push(panel);
     return out;
   }
 
@@ -582,6 +603,7 @@
       if (h.indexOf("/rules/") > 0) on = location.pathname.indexOf("/market/rules") === 0;
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
+    badgePoll = null;
     if (!me) {
       box.appendChild(el("a", { href: "#/login", text: "התחברות" })); box.appendChild(el("a", { cls: "hbtn", href: "#/register", text: "הרשמה" }));
       return;
@@ -609,7 +631,7 @@
         badge.textContent = n ? String(n) : "";
       });
     }
-    poll(); badgeTimer = setInterval(poll, 20000);
+    badgePoll = poll; poll(); badgeTimer = setInterval(poll, 20000);
   }
 
   function contactAdminPage() {
@@ -642,6 +664,7 @@
 
   // ---- router
   function route() {
+    afterChat = null;
     closeChat();
     root.textContent = "";
     renderHeader();

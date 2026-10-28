@@ -182,6 +182,7 @@ def fhead(title, path):
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Heebo:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="{V("assets/forum.css")}">
+<script src="{V("assets/ask.js")}" defer></script>
 </head>
 <body class="forum">
 <header class="fbar"><div class="fwrap">
@@ -196,7 +197,7 @@ def ffoot():
     return '''</div></main>
 <footer class="ffoot"><div class="fwrap">
   <div><span class="fname">'''+FORUM+'''</span> · <span>כל בקשה ואיש מקצוע מאושרים ידנית</span></div>
-  <nav><a href="/market/">הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/">כללי הלוח</a><a href="/market/#/contact">צור קשר עם ההנהלה</a></nav>
+  <a href="/market/#/contact">צור קשר עם ההנהלה</a>
 </div></footer>
 </body></html>
 '''
@@ -390,7 +391,7 @@ _ap = os.path.join(OUT, "admin", "index.html")
 if os.path.exists(_ap):
     with open(_ap, encoding="utf-8") as _f:
         _h = _f.read()
-    for _name in ("assets/style.css",):
+    for _name in ("assets/style.css", "assets/ask.js"):
         _h = re.sub(r'(["\'])/%s(\?v=[0-9a-f]+)?\1' % re.escape(_name), lambda m: m.group(1) + V(_name) + m.group(1), _h)
     with open(_ap, "w", encoding="utf-8") as _f:
         _f.write(_h)
