@@ -85,13 +85,61 @@
     var mail = el("a", { cls: "btn ghost sm", text: "שליחה במייל", href: "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(text + "\n" + url) });
     return [c, mail];
   }
-  function profileLink(id, code) {
-    return location.origin + location.pathname + (code ? "?ref=" + code : "") + "#/pro/" + id;
+  function profileLink(p, code) {
+    return location.origin + "/market/p/" + encodeURIComponent(p.username || String(p.id)) + (code ? "?ref=" + code : "");
+  }
+  var SOC_ICON = {
+    github: "M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.8-.3 2.8 1a9.6 9.6 0 0 1 5 0c2-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z",
+    gitlab: "M12 21 3 14l1.6-9 2.5 6h9.8l2.5-6L21 14z",
+    linkedin: "M5 3.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5zM3.5 8.5h3V20h-3zM9 8.5h2.9v1.6c.4-.8 1.4-1.8 3.2-1.8 3 0 3.6 2 3.6 4.6V20h-3v-6.3c0-1.5 0-3.3-2-3.3s-2.3 1.6-2.3 3.2V20H9z",
+    website: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 0c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18M3 12h18"
+  };
+  function socialLinks(p) {
+    var list = (p.socials || []).slice();
+    if (p.mt && p.mt.verified) list.push({ kind: "mt", label: "מתמחים טופ", url: p.mt.url });
+    if (!list.length) return null;
+    var box = el("div", { cls: "socials" });
+    list.forEach(function (x) {
+      var a = el("a", { cls: "soc " + x.kind, href: x.url, target: "_blank", rel: "noopener noreferrer nofollow", title: x.label });
+      if (SOC_ICON[x.kind]) {
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("viewBox", "0 0 24 24");
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("d", SOC_ICON[x.kind]);
+        if (x.kind === "website") { path.setAttribute("fill", "none"); path.setAttribute("stroke", "currentColor"); path.setAttribute("stroke-width", "1.8"); }
+        svg.appendChild(path); a.appendChild(svg);
+      }
+      a.appendChild(el("span", { text: x.label }));
+      box.appendChild(a);
+    });
+    return box;
+  }
+  function emailCard(p, link) {
+    var esc = function (t) { return String(t || "").replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); };
+    var img = p.photo ? '<td style="padding:0 0 0 14px;vertical-align:top"><img src="' + esc(location.origin + p.photo) + '" width="64" height="64" style="border-radius:50%;display:block" alt=""></td>' : "";
+    return '<table dir="rtl" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;border:1px solid #dfe3ea;border-radius:10px;padding:14px;background:#ffffff"><tr>' + img +
+      '<td style="vertical-align:top"><div style="font-size:17px;font-weight:bold;color:#14243f">' + esc(p.name) + '</div>' +
+      '<div style="font-size:13px;color:#5b6576;margin:2px 0 8px">' + esc([p.field, "איש מקצוע מאושר · מלאכת מחשבת"].filter(Boolean).join(" · ")) + '</div>' +
+      '<a href="' + esc(link) + '" style="display:inline-block;background:#1e4f8f;color:#ffffff;text-decoration:none;font-size:13px;padding:6px 14px;border-radius:6px">לפרופיל המלא</a></td></tr></table>';
   }
   function shareProfile(p) {
     var box = el("div", { cls: "act" });
     function build(code) {
-      shareButtons(p.name, p.name + (p.field ? " · " + p.field : ""), profileLink(p.id, code)).forEach(function (b) { box.appendChild(b); });
+      var link = profileLink(p, code);
+      shareButtons(p.name, p.name + (p.field ? " · " + p.field : ""), link).forEach(function (b) { box.appendChild(b); });
+      if (me && me.id === p.id) {
+        var cb = el("button", { cls: "btn ghost sm", type: "button", text: "העתקת כרטיס למייל" });
+        cb.addEventListener("click", function () {
+          var html = emailCard(p, link), done = function () { cb.textContent = "הועתק. הדבק בגוף המייל או בחתימה"; setTimeout(function () { cb.textContent = "העתקת כרטיס למייל"; }, 2500); };
+          try {
+            navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([p.name + " · " + link], { type: "text/plain" }) })]).then(done, fallback);
+          } catch (e) { fallback(); }
+          function fallback() {
+            var tmp = el("div"); tmp.innerHTML = html; tmp.style.position = "fixed"; tmp.style.left = "-9999px"; document.body.appendChild(tmp);
+            var r = document.createRange(); r.selectNodeContents(tmp); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+            try { document.execCommand("copy"); done(); } catch (e2) {} sel.removeAllRanges(); tmp.remove();
+          }
+        });
+        box.appendChild(cb);
+      }
     }
     if (me) api("GET", "partner").then(function (r) { build(r.code); }); else build("");
     return box;
@@ -309,13 +357,25 @@
     var kind = select({ individual: "איש מקצוע פרטי", company: "חברה" }, p.kind), fld = el("input", { value: p.field || "" }),
       bio = el("textarea", { rows: 3, value: p.bio || "" }), exp = el("input", { value: p.exp || "", placeholder: "למשל: 5 שנים בפיתוח" }),
       links = el("textarea", { rows: 2, value: (p.links || []).join("\n") });
+    var cur = {}; (p.socials || []).forEach(function (x) { cur[x.kind] = x.url; });
+    var soc = {
+      github: el("input", { value: cur.github || "", placeholder: "שם משתמש או https://github.com/...", dir: "ltr" }),
+      gitlab: el("input", { value: cur.gitlab || "", placeholder: "שם משתמש או https://gitlab.com/...", dir: "ltr" }),
+      linkedin: el("input", { value: cur.linkedin || "", placeholder: "https://www.linkedin.com/in/...", dir: "ltr" }),
+      website: el("input", { value: cur.website || "", placeholder: "https://...", dir: "ltr" })
+    };
     var m = msgBox(), b = el("button", { cls: "btn ghost", type: "button", text: "שמירת פרופיל" });
     b.addEventListener("click", function () {
-      api("PUT", "profile", { kind: kind.value, field: fld.value, bio: bio.value, exp: exp.value, links: links.value }).then(function (r) { m.textContent = r.ok ? "נשמר." : "השמירה נכשלה."; });
+      var sv = {}; Object.keys(soc).forEach(function (k) { sv[k] = soc[k].value.trim(); });
+      api("PUT", "profile", { kind: kind.value, field: fld.value, bio: bio.value, exp: exp.value, links: links.value, socials: sv }).then(function (r) { m.textContent = r.ok ? "נשמר. כתובת שלא נראית תקינה לא נשמרת." : "השמירה נכשלה."; if (r.ok) load(); });
     });
     return section("פרופיל איש מקצוע", [el("div", { cls: "who" }, [avatar(p, true), el("p", { cls: "meta", text: proLine(p) })]),
       shareProfile(p),
-      field("סוג", kind), field("תחום", fld), field("ניסיון", exp), field("על עצמך או על החברה", bio), field("קישורים", links),
+      field("סוג", kind), field("תחום", fld), field("ניסיון", exp), field("על עצמך או על החברה", bio),
+      el("strong", { text: "חשבונות" }),
+      el("div", { cls: "two" }, [field("GitHub", soc.github), field("GitLab", soc.gitlab)]),
+      el("div", { cls: "two" }, [field("LinkedIn", soc.linkedin), field("אתר אישי", soc.website)]),
+      field("קישורים נוספים (כתובת בכל שורה)", links),
       el("div", { cls: "act" }, [b]), m,
       el("hr", { cls: "sep" }),
       imagePicker("תמונת פרופיל", "photo", p.photo_status, p.photo),
@@ -373,9 +433,10 @@
       var p = (Array.isArray(rows) ? rows : []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!p) { s.appendChild(el("p", { text: "הפרופיל לא נמצא." })); return; }
       var c = el("article", { cls: "card mk-sec profile" + (p.cover ? " has-cover" : "") }, [el("div", { cls: "cover", style: p.cover ? "background-image:url(" + p.cover + ")" : "" }), el("div", { cls: "profile-head" }, [avatar(p, true), el("div", {}, [el("h1", { text: p.name }), p.username ? el("p", { cls: "meta", text: "@" + p.username }) : null, el("p", { cls: "meta", text: proLine(p) })])]),
-        mtBadge(p.mt),
+        p.mt && !p.mt.verified ? mtBadge(p.mt) : null,
         p.field ? el("p", {}, [el("strong", { text: "תחום: " }), p.field]) : null, p.exp ? el("p", {}, [el("strong", { text: "ניסיון: " }), p.exp]) : null,
         p.bio ? el("p", { text: p.bio }) : null]);
+      var soc = socialLinks(p); if (soc) c.appendChild(soc);
       linksOf(p).forEach(function (a) { c.appendChild(a); });
       c.appendChild(shareProfile(p));
       s.appendChild(c);

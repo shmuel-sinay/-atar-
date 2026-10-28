@@ -208,6 +208,8 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path_only()
+        if p.startswith("/market/p/"):
+            return market.profile_page(self, p[len("/market/p/"):])
         if p == "/api/products":
             d = load_data()
             return self.reply(200, [x for x in d["products"] if x.get("visible", True)])

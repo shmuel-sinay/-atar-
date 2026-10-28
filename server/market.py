@@ -74,7 +74,7 @@ def init(secret, directory):
                      "ALTER TABLE users ADD COLUMN username TEXT", "ALTER TABLE users ADD COLUMN mt_user TEXT", "ALTER TABLE users ADD COLUMN mt_code TEXT",
                      "ALTER TABLE users ADD COLUMN mt_verified INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN mt_rep INTEGER",
                      "ALTER TABLE users ADD COLUMN mt_posts INTEGER", "ALTER TABLE users ADD COLUMN mt_checked INTEGER",
-                     "ALTER TABLE pros ADD COLUMN cover INTEGER NOT NULL DEFAULT 0"):
+                     "ALTER TABLE pros ADD COLUMN cover INTEGER NOT NULL DEFAULT 0", "ALTER TABLE pros ADD COLUMN socials TEXT"):
             try:
                 c.execute(stmt)
             except sqlite3.OperationalError:
@@ -269,6 +269,77 @@ def mt_fetch(slug):
         return None
 
 
+# linked accounts: (label, how a profile address must look, how to build it from a bare username)
+SOCIAL = {
+    "github": ("GitHub", r"^https://github\.com/[A-Za-z0-9-]{1,39}/?$", "https://github.com/%s", r"^[A-Za-z0-9-]{1,39}$"),
+    "gitlab": ("GitLab", r"^https://gitlab\.com/[A-Za-z0-9_.-]{1,60}/?$", "https://gitlab.com/%s", r"^[A-Za-z0-9_.-]{1,60}$"),
+    "linkedin": ("LinkedIn", r"^https://(www\.)?linkedin\.com/in/[A-Za-z0-9_%-]{2,100}/?$", None, None),
+    "website": ("אתר", r"^https?://[^\s<>\"']{4,200}$", None, None),
+}
+
+
+def clean_socials(d):
+    out = {}
+    for k, (label, url_re, build, user_re) in SOCIAL.items():
+        v = clip((d or {}).get(k), 200)
+        if not v:
+            continue
+        if user_re and re.match(user_re, v.lstrip("@")):
+            v = build % v.lstrip("@")
+        if not v.startswith("http") and k == "website":
+            v = "https://" + v
+        if re.match(url_re, v):
+            out[k] = v
+    return out
+
+
+def socials_out(raw):
+    try:
+        d = json.loads(raw or "{}")
+    except ValueError:
+        d = {}
+    return [{"kind": k, "label": SOCIAL[k][0], "url": d[k]} for k in SOCIAL if d.get(k)]
+
+
+def profile_page(h, key):
+    """/market/p/<username or id>: a real page with a share preview, which then opens the profile in the board."""
+    import html as H
+    from urllib.parse import unquote
+    key = unquote(key).strip("/")
+    with db() as c:
+        if key.isdigit():
+            u = c.execute("SELECT * FROM users WHERE id=? AND role='pro' AND status='active'", (int(key),)).fetchone()
+        else:
+            u = c.execute("SELECT * FROM users WHERE lower(username)=lower(?) AND role='pro' AND status='active'", (key,)).fetchone()
+        p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone() if u else None
+    if not u or not p:
+        body = "<!doctype html><meta charset=utf-8><title>לא נמצא</title><p dir=rtl>הפרופיל לא נמצא. <a href='/market/'>ללוח</a></p>"
+        status = 404
+    else:
+        base = "https://" + (h.headers.get("Host") or "kosher-tek.com")
+        img = base + ("/api/m/cover/%d" % u["id"] if p["cover"] == 2 else "/api/m/photo/%d" % u["id"] if p["photo"] == 2 else "/assets/forum-icon.svg")
+        title = H.escape("%s · מלאכת מחשבת" % u["name"])
+        desc = H.escape(" · ".join(x for x in [p["field"] or "", (p["bio"] or "")[:150]] if x) or "איש מקצוע מאושר בלוח מלאכת מחשבת")
+        from urllib.parse import urlparse, parse_qs
+        ref = (parse_qs(urlparse(h.path).query).get("ref") or [""])[0]
+        target = "/market/%s#/pro/%d" % ("?ref=" + ref if re.match(r"^[0-9a-f]{4,20}$", ref) else "", u["id"])
+        body = ("<!doctype html><html lang=he dir=rtl><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                "<title>%s</title><meta name=description content=\"%s\">"
+                "<meta property=og:title content=\"%s\"><meta property=og:description content=\"%s\"><meta property=og:image content=\"%s\">"
+                "<meta property=og:type content=profile><meta name=twitter:card content=summary_large_image>"
+                "<meta http-equiv=refresh content=\"0;url=%s\"></head><body><p><a href=\"%s\">לפרופיל של %s</a></p></body></html>"
+                ) % (title, desc, title, desc, H.escape(img), target, target, H.escape(u["name"]))
+        status = 200
+    b = body.encode("utf-8")
+    h.send_response(status)
+    h.send_header("Content-Type", "text/html; charset=utf-8")
+    h.send_header("Content-Length", str(len(b)))
+    h.send_header("Cache-Control", "public, max-age=300")
+    h.send_header("X-Content-Type-Options", "nosniff")
+    h.end_headers()
+    h.wfile.write(b)
+
+
 def account_routes(h, method, sub, d, u):
     with db() as c:
         if method == "PUT" and sub == "account":
@@ -315,6 +386,7 @@ def pro_card(p, u, c=None):
     return {"id": u["id"], "name": u["name"], "username": urow["username"] if urow else None, "mt": mt_out(urow), "kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"] or "",
             "photo": "/api/m/photo/%d" % u["id"] if p["photo"] == 2 else "", "photo_status": p["photo"],
             "cover": "/api/m/cover/%d" % u["id"] if p["cover"] == 2 else "", "cover_status": p["cover"],
+            "socials": socials_out(p["socials"]),
             "links": [x for x in (p["links"] or "").split("\n") if x], "level": p["level"],
             "rating": shown_rating(p), "ratings": p["rating_count"],
             "founding": bool(p["founding_until"] and p["founding_until"] > time.time()),
@@ -514,9 +586,10 @@ def route(h, method, path):
         return h.reply(200, {"ok": True})
     if method == "PUT" and sub == "profile" and u["role"] == "pro":
         with db() as c:
-            c.execute("UPDATE pros SET kind=?, field=?, bio=?, exp=?, links=? WHERE user_id=?",
+            c.execute("UPDATE pros SET kind=?, field=?, bio=?, exp=?, links=?, socials=? WHERE user_id=?",
                       (d.get("kind") if d.get("kind") in ("individual", "company") else "individual",
-                       clip(d.get("field"), 80), clip(d.get("bio"), 600), clip(d.get("exp"), 200), clean_links(d.get("links")), u["id"]))
+                       clip(d.get("field"), 80), clip(d.get("bio"), 600), clip(d.get("exp"), 200), clean_links(d.get("links")),
+                       json.dumps(clean_socials(d.get("socials")), ensure_ascii=False), u["id"]))
         return h.reply(200, {"ok": True})
     if method == "GET" and sub == "partner":
         with db() as c:
