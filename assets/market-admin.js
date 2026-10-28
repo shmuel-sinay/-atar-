@@ -54,7 +54,7 @@
 
   function render() {
     SIZEMAP = data.labels.sizes; LEVELMAP = data.labels.levels; CATMAP = data.labels.cats;
-    var pending = data.users.filter(function (u) { return u.status === "pending" || u.photo === 1; }).length;
+    var pending = data.users.filter(function (u) { return u.status === "pending" || u.photo === 1 || u.cover === 1; }).length;
     var review = data.requests.filter(function (r) { return r.status === "review"; }).length;
     document.getElementById("ucount").textContent = pending ? "(" + pending + ")" : "";
     document.getElementById("rcount").textContent = review ? "(" + review + ")" : "";
@@ -69,7 +69,7 @@
     });
     ul.appendChild(el("div", { cls: "toolbar" }, [bar]));
     var shown = data.users.filter(function (u) {
-      return ufilter === "all" || (ufilter === "pending" ? (u.status === "pending" || u.photo === 1) : ufilter === "blocked" ? u.status === "blocked" : u.role === ufilter);
+      return ufilter === "all" || (ufilter === "pending" ? (u.status === "pending" || u.photo === 1 || u.cover === 1) : ufilter === "blocked" ? u.status === "blocked" : u.role === ufilter);
     });
     shown.forEach(function (u) {
       var stCls = u.status === "active" ? "st-open" : u.status === "pending" ? "st-review" : "st-closed";
@@ -90,6 +90,10 @@
           var im = el("img", { cls: "thumb", alt: "", src: "/api/admin/m/photo/" + u.id + "?t=" + Date.now() });
           lines.push(el("div", { cls: "who" }, [im, el("span", { cls: "meta", text: u.photo === 1 ? "תמונה ממתינה לאישור" : "תמונה מאושרת" })]));
         }
+        if (u.cover) {
+          var cv = el("img", { cls: "thumb wide", alt: "", src: "/api/admin/m/cover/" + u.id + "?t=" + Date.now() });
+          lines.push(el("div", { cls: "who" }, [cv, el("span", { cls: "meta", text: u.cover === 1 ? "רקע ממתין לאישור" : "רקע מאושר" })]));
+        }
         if (u.status === "pending") lines.push(el("div", { cls: "note", text: "איש המקצוע ממתין לאישור. עד האישור הוא לא יכול להגיש הצעות או לפתוח שיחות." }));
         lvl = sel(LEVELMAP, u.level);
         rating = el("input", { type: "number", min: 1, max: 5, step: 0.5, value: u.admin_rating == null ? "" : u.admin_rating, placeholder: "1 עד 5" });
@@ -99,6 +103,8 @@
       if (u.status === "pending") acts.appendChild(el("button", { type: "button", cls: "btn primary sm", text: "אישור הצטרפות", onclick: function () { set({ status: "active" }); } }));
       if (u.status === "blocked") acts.appendChild(btn("ביטול חסימה", function () { set({ status: "active" }); }));
       if (u.role === "pro" && u.photo === 1) acts.appendChild(btn("אישור תמונה", function () { call("POST", "photo", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
+      if (u.role === "pro" && u.cover === 1) acts.appendChild(btn("אישור רקע", function () { call("POST", "cover", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
+      if (u.role === "pro" && u.cover) acts.appendChild(btn("הסרת רקע", function () { call("POST", "cover", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
       if (u.role === "pro" && u.photo) acts.appendChild(btn("הסרת תמונה", function () { call("POST", "photo", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
       if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { ktAsk("לחסום את " + u.name + "?", { danger: true }).then(function (ok) { if (ok) set({ status: "blocked" }); }); }, true));
       var kids = lines.slice();

@@ -172,14 +172,20 @@
     else box.textContent = (p.name || "?").trim().charAt(0);
     return box;
   }
-  function shrinkPhoto(file) {
+  function shrinkPhoto(file, cover) {
     return new Promise(function (res, rej) {
       var img = new Image(), u = URL.createObjectURL(file);
       img.onload = function () {
-        var m = 400, s = Math.min(1, m / Math.max(img.width, img.height)), c = document.createElement("canvas");
-        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
-        res(c.toDataURL("image/jpeg", 0.82));
+        var c = document.createElement("canvas"), sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (cover) {
+          // backgrounds are cut to a 3:1 strip from the middle
+          if (sw / sh > 3) { sw = sh * 3; sx = (img.width - sw) / 2; } else { sh = sw / 3; sy = (img.height - sh) / 2; }
+          c.width = Math.min(1500, Math.round(sw)); c.height = Math.round(c.width / 3);
+        } else {
+          var s = Math.min(1, 400 / Math.max(sw, sh)); c.width = Math.round(sw * s); c.height = Math.round(sh * s);
+        }
+        c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+        res(c.toDataURL("image/jpeg", cover ? 0.8 : 0.82));
       };
       img.onerror = rej; img.src = u;
     });
@@ -252,6 +258,53 @@
     return wrap;
   }
 
+  function mtBadge(mt) {
+    if (!mt) return null;
+    var txt = "מתמחים טופ: " + mt.user + (mt.verified ? " · מאומת" + (mt.rep != null ? " · מוניטין " + mt.rep + " · " + mt.posts + " פוסטים" : "") : " · לא מאומת");
+    return el("a", { cls: "mtbadge" + (mt.verified ? " ok" : ""), href: mt.url, target: "_blank", rel: "noopener noreferrer", text: txt });
+  }
+  function accountBox() {
+    var uname = el("input", { value: me.username || "", maxLength: 20, placeholder: "למשל: yossi_dev", dir: "auto" }), um = msgBox();
+    var ub = el("button", { cls: "btn primary", type: "button", text: "שמירת שם המשתמש" });
+    ub.addEventListener("click", function () {
+      api("PUT", "account", { username: uname.value.trim() }).then(function (r) {
+        um.textContent = r.ok ? "נשמר." : r.__status === 409 ? "שם המשתמש תפוס. נסה שם אחר." : "3 עד 20 תווים: אותיות, ספרות, נקודה, מקף או קו תחתון.";
+        if (r.ok) load();
+      });
+    });
+    var mt = me.mt, link = el("input", { value: mt ? mt.url : "", placeholder: "https://mitmachim.top/user/...", dir: "ltr" }), mm = msgBox();
+    var lb = el("button", { cls: "btn", type: "button", text: mt ? "עדכון הקישור" : "קישור הפרופיל" });
+    var status = el("div", { cls: "mtstatus" });
+    function drawStatus(code) {
+      status.textContent = "";
+      if (me.mt && me.mt.verified) { status.appendChild(mtBadge(me.mt)); return; }
+      if (!me.mt) return;
+      var vb = el("button", { cls: "btn primary sm", type: "button", text: "אימות" });
+      vb.addEventListener("click", function () {
+        mm.textContent = "בודק...";
+        api("POST", "mt/verify", {}).then(function (r) {
+          if (r.ok) { mm.textContent = "הפרופיל אומת. אפשר להסיר את הקוד מהפרופיל במתמחים."; load(); return; }
+          mm.textContent = r.__status === 409 ? "הקוד לא נמצא בפרופיל במתמחים. ודא ששמרת אותו בשדה \"אודות\" ונסה שוב." :
+            r.__status === 502 ? "לא הצלחנו להתחבר למתמחים טופ כרגע. נסה שוב מאוחר יותר." : r.__status === 429 ? "יותר מדי ניסיונות, נסה שוב בעוד שעה." : "האימות נכשל.";
+        });
+      });
+      status.appendChild(el("div", { cls: "mtcode" }, [el("span", { text: "כדי לאמת שזה אתה, הוסף את הקוד הזה לשדה \"אודות\" בפרופיל שלך במתמחים טופ, שמור, ולחץ אימות:" }),
+        el("code", { text: code || me.mt_code || "" }), vb]));
+    }
+    lb.addEventListener("click", function () {
+      api("POST", "mt/link", { link: link.value }).then(function (r) {
+        if (!r.ok) { mm.textContent = "הקישור לא תקין."; return; }
+        mm.textContent = r.removed ? "הקישור הוסר." : "";
+        load();
+      });
+    });
+    drawStatus();
+    return section("החשבון שלי", [
+      field("שם משתמש (מוצג בלוח במקום השם המלא)", uname), el("div", { cls: "act" }, [ub]), um,
+      el("hr", { cls: "sep" }),
+      field("הפרופיל שלך במתמחים טופ (אופציונלי)", link), el("p", { cls: "meta", text: "מדביקים את כתובת הפרופיל. אחרי אימות יוצגו בפרופיל שלך כאן המוניטין ומספר הפוסטים שלך שם. כדי להסיר, מוחקים את הכתובת ולוחצים עדכון." }),
+      el("div", { cls: "act" }, [lb]), status, mm]);
+  }
   function proProfile(p) {
     var kind = select({ individual: "איש מקצוע פרטי", company: "חברה" }, p.kind), fld = el("input", { value: p.field || "" }),
       bio = el("textarea", { rows: 3, value: p.bio || "" }), exp = el("input", { value: p.exp || "", placeholder: "למשל: 5 שנים בפיתוח" }),
@@ -260,20 +313,43 @@
     b.addEventListener("click", function () {
       api("PUT", "profile", { kind: kind.value, field: fld.value, bio: bio.value, exp: exp.value, links: links.value }).then(function (r) { m.textContent = r.ok ? "נשמר." : "השמירה נכשלה."; });
     });
-    var file = el("input", { type: "file", accept: "image/*" }), pm = msgBox();
-    var ps = { 0: "אין תמונה", 1: "התמונה ממתינה לאישור הנהלה ותוצג לאחר האישור", 2: "התמונה מוצגת" };
-    pm.textContent = ps[p.photo_status || 0];
-    file.addEventListener("change", function () {
-      if (!file.files[0]) return;
-      shrinkPhoto(file.files[0]).then(function (d) { return api("POST", "photo", { data: d }); })
-        .then(function (r) { pm.textContent = r.ok ? ps[1] : "ההעלאה נכשלה."; }).catch(function () { pm.textContent = "ההעלאה נכשלה."; });
-    });
-    var rm = el("button", { cls: "btn ghost sm", type: "button", text: "הסרת תמונה" });
-    rm.addEventListener("click", function () { api("POST", "photo/remove", {}).then(function () { pm.textContent = ps[0]; }); });
-    return section("הפרופיל שלי", [el("div", { cls: "who" }, [avatar(p, true), el("p", { cls: "meta", text: proLine(p) })]),
+    return section("פרופיל איש מקצוע", [el("div", { cls: "who" }, [avatar(p, true), el("p", { cls: "meta", text: proLine(p) })]),
       shareProfile(p),
       field("סוג", kind), field("תחום", fld), field("ניסיון", exp), field("על עצמך או על החברה", bio), field("קישורים", links),
-      field("תמונה (אופציונלי, באישור הנהלה)", file), pm, el("div", { cls: "act" }, [b, rm]), m]);
+      el("div", { cls: "act" }, [b]), m,
+      el("hr", { cls: "sep" }),
+      imagePicker("תמונת פרופיל", "photo", p.photo_status, p.photo),
+      imagePicker("תמונת רקע לפרופיל (רחבה, תיחתך לרצועה)", "cover", p.cover_status, p.cover)]);
+  }
+  function imagePicker(label, kind, status, url) {
+    var ST = { 0: "אין תמונה.", 1: "התמונה ממתינה לאישור ההנהלה ותוצג לאחר האישור.", 2: "התמונה מוצגת בפרופיל." };
+    var pm = msgBox(); pm.textContent = ST[status || 0];
+    var file = el("input", { type: "file", accept: "image/*", hidden: true });
+    var preview = el("div", { cls: "pick-prev " + kind });
+    if (url) preview.style.backgroundImage = "url(" + url + ")";
+    var zone = el("div", { cls: "pick " + kind, tabIndex: 0, role: "button", "aria-label": label + ": בחירה או הדבקה של תמונה" }, [preview,
+      el("span", { cls: "pick-txt", text: "לחץ לבחירת קובץ, או העתק תמונה ולחץ כאן Ctrl+V" })]);
+    if (url) zone.classList.add("has");
+    function upload(f) {
+      if (!f || !/^image\//.test(f.type)) { pm.textContent = "זה לא קובץ תמונה."; return; }
+      pm.textContent = "מעלה...";
+      shrinkPhoto(f, kind === "cover").then(function (d) { preview.style.backgroundImage = "url(" + d + ")"; zone.classList.add("has"); return api("POST", kind, { data: d }); })
+        .then(function (r) { pm.textContent = r.ok ? ST[1] : "ההעלאה נכשלה."; }).catch(function () { pm.textContent = "ההעלאה נכשלה."; });
+    }
+    zone.addEventListener("click", function () { file.click(); });
+    zone.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } });
+    zone.addEventListener("paste", function (e) {
+      var items = (e.clipboardData || {}).items || [];
+      for (var i = 0; i < items.length; i++) if (items[i].type.indexOf("image/") === 0) { e.preventDefault(); return upload(items[i].getAsFile()); }
+      pm.textContent = "בלוח ההעתקה אין תמונה.";
+    });
+    zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("over"); });
+    zone.addEventListener("dragleave", function () { zone.classList.remove("over"); });
+    zone.addEventListener("drop", function (e) { e.preventDefault(); zone.classList.remove("over"); upload(e.dataTransfer.files[0]); });
+    file.addEventListener("change", function () { upload(file.files[0]); });
+    var rm = el("button", { cls: "btn ghost sm", type: "button", text: "הסרה" });
+    rm.addEventListener("click", function () { api("POST", kind + "/remove", {}).then(function () { preview.style.backgroundImage = ""; zone.classList.remove("has"); pm.textContent = ST[0]; }); });
+    return el("div", { cls: "mf" }, [el("span", { text: label }), zone, file, el("div", { cls: "act" }, [rm]), pm]);
   }
   function prosList() {
     var s = el("div");
@@ -282,6 +358,7 @@
       var g = el("div", { cls: "grid c3" });
       rows.forEach(function (p) {
         var c = el("a", { cls: "pcard", href: "#/pro/" + p.id }, [el("div", { cls: "who" }, [avatar(p, true), el("div", {}, [el("h3", { text: p.name }), el("p", { cls: "meta", text: proLine(p) })])]),
+          p.mt && p.mt.verified ? el("span", { cls: "mtbadge ok sm", text: "מאומת במתמחים טופ" + (p.mt.rep != null ? " · מוניטין " + p.mt.rep : "") }) : null,
           p.field ? el("p", { text: p.field }) : null, p.bio ? el("p", { cls: "meta", text: p.bio.length > 120 ? p.bio.slice(0, 120) + "…" : p.bio }) : null, el("span", { cls: "more", text: "לפרופיל המלא ←" })]);
         g.appendChild(c);
       });
@@ -295,7 +372,8 @@
     api("GET", "pros").then(function (rows) {
       var p = (Array.isArray(rows) ? rows : []).filter(function (x) { return String(x.id) === String(id); })[0];
       if (!p) { s.appendChild(el("p", { text: "הפרופיל לא נמצא." })); return; }
-      var c = el("article", { cls: "card mk-sec" }, [el("div", { cls: "profile-head" }, [avatar(p, true), el("div", {}, [el("h1", { text: p.name }), el("p", { cls: "meta", text: proLine(p) })])]),
+      var c = el("article", { cls: "card mk-sec profile" + (p.cover ? " has-cover" : "") }, [el("div", { cls: "cover", style: p.cover ? "background-image:url(" + p.cover + ")" : "" }), el("div", { cls: "profile-head" }, [avatar(p, true), el("div", {}, [el("h1", { text: p.name }), p.username ? el("p", { cls: "meta", text: "@" + p.username }) : null, el("p", { cls: "meta", text: proLine(p) })])]),
+        mtBadge(p.mt),
         p.field ? el("p", {}, [el("strong", { text: "תחום: " }), p.field]) : null, p.exp ? el("p", {}, [el("strong", { text: "ניסיון: " }), p.exp]) : null,
         p.bio ? el("p", { text: p.bio }) : null]);
       linksOf(p).forEach(function (a) { c.appendChild(a); });
@@ -639,8 +717,8 @@
       return;
     }
     var links = me.role === "client" ? [["requests", "הבקשות שלי"], ["messages", "הודעות"], ["partners", "שותפים"]]
-      : me.status === "active" ? [["mine", "העבודות שלי"], ["messages", "הודעות"], ["profile", "הפרופיל"], ["partners", "שותפים"]]
-      : [["profile", "הפרופיל"]];
+      : me.status === "active" ? [["mine", "העבודות שלי"], ["messages", "הודעות"], ["partners", "שותפים"]]
+      : [];
     var msgLink = null, badge = el("span", { cls: "badge" });
     links.forEach(function (l) {
       var a = el("a", { href: "#/" + l[0], text: l[1] });
@@ -650,7 +728,9 @@
     });
     if (me.role === "client") box.appendChild(el("a", { cls: "hbtn", href: "#/new", text: "בקשה חדשה" }));
     box.appendChild(el("span", { cls: "sep" }));
-    box.appendChild(el("span", { cls: "uname", text: first(me.name) }));
+    var un = el("a", { cls: "uname", href: "#/profile", title: "הפרופיל שלי" }, [avatar(Object.assign({ name: me.username || me.name }, me.profile || {}), false, "xs"), el("span", { text: me.username || first(me.name) })]);
+    if (hash === "profile") un.setAttribute("aria-current", "page");
+    box.appendChild(un);
     var out = el("button", { type: "button", text: "יציאה" });
     out.addEventListener("click", function () { api("POST", "logout", {}).then(function () { go(""); load(); }); });
     box.appendChild(out);
@@ -711,7 +791,12 @@
     if (p0 === "mine") return minePage();
     if (p0 === "messages") return simplePage("הודעות", chatsStrip(true));
     if (p0 === "partners") return simplePage("תוכנית שותפים", partnerBox());
-    if (p0 === "profile") return me.role === "pro" ? simplePage("הפרופיל שלי", proProfile(me.profile)) : go("");
+    if (p0 === "profile") {
+      root.appendChild(pageTitle("הפרופיל שלי"));
+      var stack = el("div", { cls: "fstack" }, [accountBox()]);
+      if (me.role === "pro" && me.profile) stack.appendChild(proProfile(me.profile));
+      root.appendChild(stack); return;
+    }
     if (p0 === "pros") { root.appendChild(pageTitle("אנשי מקצוע")); root.appendChild(el("p", { cls: "lead", text: "אנשי מקצוע וחברות שאושרו ידנית על ידי ההנהלה. אפשר לתייג אחד מהם בבקשה חדשה." })); root.appendChild(prosList()); return; }
     if (p0 === "pro") { root.appendChild(proPage(parts[1])); return; }
     feedPage("");

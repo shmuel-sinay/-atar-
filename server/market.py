@@ -70,11 +70,16 @@ def init(secret, directory):
           text TEXT, created INTEGER NOT NULL);
         """)
         for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE pros ADD COLUMN founding_until INTEGER", "ALTER TABLE requests ADD COLUMN via_admin INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
-                     "ALTER TABLE requests ADD COLUMN tagged_pro INTEGER", "ALTER TABLE requests ADD COLUMN only_tagged INTEGER NOT NULL DEFAULT 0"):
+                     "ALTER TABLE requests ADD COLUMN tagged_pro INTEGER", "ALTER TABLE requests ADD COLUMN only_tagged INTEGER NOT NULL DEFAULT 0",
+                     "ALTER TABLE users ADD COLUMN username TEXT", "ALTER TABLE users ADD COLUMN mt_user TEXT", "ALTER TABLE users ADD COLUMN mt_code TEXT",
+                     "ALTER TABLE users ADD COLUMN mt_verified INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN mt_rep INTEGER",
+                     "ALTER TABLE users ADD COLUMN mt_posts INTEGER", "ALTER TABLE users ADD COLUMN mt_checked INTEGER",
+                     "ALTER TABLE pros ADD COLUMN cover INTEGER NOT NULL DEFAULT 0"):
             try:
                 c.execute(stmt)
             except sqlite3.OperationalError:
                 pass
+        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_username ON users(lower(username)) WHERE username IS NOT NULL")
         # partner rewards have no approval stages any more
         c.execute("UPDATE credits SET status='approved' WHERE status='pending'")
     os.makedirs(os.path.join(directory, "market_photos"), exist_ok=True)
@@ -221,9 +226,95 @@ def shown_rating(p):
     return p["admin_rating"]
 
 
+MT_SITE = os.environ.get("KT_MT_SITE", "https://mitmachim.top")
+USERNAME_RE = re.compile(r"^[\w.\-]{3,20}$")
+
+
+def public_name(row):
+    """What the board shows for a member: his username if he set one, else his first name."""
+    try:
+        if row["username"]:
+            return row["username"]
+    except (IndexError, KeyError):
+        pass
+    return first_name(row["name"])
+
+
+def mt_out(urow):
+    if not urow or not urow["mt_user"]:
+        return None
+    return {"user": urow["mt_user"], "url": MT_SITE + "/user/" + urow["mt_user"], "verified": bool(urow["mt_verified"]),
+            "rep": urow["mt_rep"], "posts": urow["mt_posts"]}
+
+
+def mt_slug(text):
+    t = str(text or "").strip()
+    m = re.search(r"mitmachim\.top/user/([^/?#\s]+)", t)
+    slug = m.group(1) if m else t
+    from urllib.parse import unquote
+    slug = unquote(slug).strip().strip("/").lower()
+    return slug if re.match(r"^[\w.\-]{1,40}$", slug) else ""
+
+
+def mt_fetch(slug):
+    """Public NodeBB profile JSON of a mitmachim.top user, or None."""
+    import urllib.request
+    from urllib.parse import quote
+    try:
+        req = urllib.request.Request(MT_SITE + "/api/user/" + quote(slug), headers={"User-Agent": "Mozilla/5.0 (kosher-tek board)", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read(400000)
+        return json.loads(raw.decode("utf-8", "replace"))
+    except Exception:
+        return None
+
+
+def account_routes(h, method, sub, d, u):
+    with db() as c:
+        if method == "PUT" and sub == "account":
+            name = clip(d.get("username"), 20)
+            if name and not USERNAME_RE.match(name):
+                return h.reply(400, {"error": "username"})
+            if name and c.execute("SELECT 1 FROM users WHERE lower(username)=lower(?) AND id<>?", (name, u["id"])).fetchone():
+                return h.reply(409, {"error": "taken"})
+            c.execute("UPDATE users SET username=? WHERE id=?", (name or None, u["id"]))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "mt/link":
+            slug = mt_slug(d.get("link"))
+            if not slug:
+                c.execute("UPDATE users SET mt_user=NULL, mt_code=NULL, mt_verified=0, mt_rep=NULL, mt_posts=NULL WHERE id=?", (u["id"],))
+                return h.reply(200, {"ok": True, "removed": True})
+            code = "KT-" + os.urandom(3).hex().upper()
+            c.execute("UPDATE users SET mt_user=?, mt_code=?, mt_verified=0, mt_rep=NULL, mt_posts=NULL WHERE id=?", (slug, code, u["id"]))
+            return h.reply(200, {"ok": True, "user": slug, "code": code})
+        if method == "POST" and sub == "mt/verify":
+            row = c.execute("SELECT * FROM users WHERE id=?", (u["id"],)).fetchone()
+            if not row["mt_user"]:
+                return h.reply(400, {"error": "nolink"})
+            if limited("mtv%d" % u["id"], 10, 3600):
+                return h.reply(429, {"error": "slow down"})
+            data = mt_fetch(row["mt_user"])
+            if data is None:
+                return h.reply(502, {"error": "unreachable"})
+            if not row["mt_verified"]:
+                if not row["mt_code"] or row["mt_code"] not in json.dumps(data, ensure_ascii=False):
+                    return h.reply(409, {"error": "code"})
+            def num(k):
+                try:
+                    return int(data.get(k) or 0)
+                except (TypeError, ValueError):
+                    return 0
+            c.execute("UPDATE users SET mt_verified=1, mt_rep=?, mt_posts=?, mt_checked=? WHERE id=?",
+                      (num("reputation"), num("postcount"), int(time.time()), u["id"]))
+            return h.reply(200, {"ok": True})
+    return h.reply(404, {"error": "not found"})
+
+
 def pro_card(p, u, c=None):
-    return {"id": u["id"], "name": u["name"], "kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"] or "",
+    urow = c.execute("SELECT * FROM users WHERE id=?", (u["id"],)).fetchone() if c is not None else None
+    return {"id": u["id"], "name": u["name"], "username": urow["username"] if urow else None, "mt": mt_out(urow), "kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"] or "",
             "photo": "/api/m/photo/%d" % u["id"] if p["photo"] == 2 else "", "photo_status": p["photo"],
+            "cover": "/api/m/cover/%d" % u["id"] if p["cover"] == 2 else "", "cover_status": p["cover"],
             "links": [x for x in (p["links"] or "").split("\n") if x], "level": p["level"],
             "rating": shown_rating(p), "ratings": p["rating_count"],
             "founding": bool(p["founding_until"] and p["founding_until"] > time.time()),
@@ -231,7 +322,8 @@ def pro_card(p, u, c=None):
 
 
 def user_out(c, u):
-    o = {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "status": u["status"]}
+    o = {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "status": u["status"],
+         "username": u["username"], "mt": mt_out(u), "mt_code": u["mt_code"] if u["mt_user"] and not u["mt_verified"] else None}
     if u["role"] == "pro":
         p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
         if p:
@@ -245,13 +337,20 @@ def estimate(cat, level, size):
     return {"lo": int(base * 0.8 // 10 * 10), "hi": int(-(-base * 1.3 // 10) * 10)}
 
 
-def photo_path(uid):
-    return os.path.join(DIR, "market_photos", "%d.jpg" % int(uid))
+# profile photo and profile background ("cover"): 0 none, 1 waiting for admin approval, 2 approved
+IMG = {"photo": {"suffix": "", "max": 500000, "get": "SELECT p.photo AS st, u.status FROM pros p JOIN users u ON u.id=p.user_id WHERE p.user_id=?",
+                 "set": "UPDATE pros SET photo=? WHERE user_id=?", "approve": "UPDATE pros SET photo=2 WHERE user_id=? AND photo>0"},
+       "cover": {"suffix": "c", "max": 900000, "get": "SELECT p.cover AS st, u.status FROM pros p JOIN users u ON u.id=p.user_id WHERE p.user_id=?",
+                 "set": "UPDATE pros SET cover=? WHERE user_id=?", "approve": "UPDATE pros SET cover=2 WHERE user_id=? AND cover>0"}}
 
 
-def send_photo(h, uid):
+def photo_path(uid, kind="photo"):
+    return os.path.join(DIR, "market_photos", "%d%s.jpg" % (int(uid), IMG[kind]["suffix"]))
+
+
+def send_photo(h, uid, kind="photo"):
     try:
-        with open(photo_path(uid), "rb") as f:
+        with open(photo_path(uid, kind), "rb") as f:
             raw = f.read()
     except OSError:
         return h.reply(404, {"error": "not found"})
@@ -264,41 +363,41 @@ def send_photo(h, uid):
     h.wfile.write(raw)
 
 
-def serve_photo(h, raw_id, viewer):
+def serve_photo(h, raw_id, viewer, kind="photo"):
     try:
         uid = int(raw_id)
     except ValueError:
         return h.reply(404, {"error": "not found"})
     with db() as c:
-        p = c.execute("SELECT p.photo, u.status FROM pros p JOIN users u ON u.id=p.user_id WHERE p.user_id=?", (uid,)).fetchone()
+        p = c.execute(IMG[kind]["get"], (uid,)).fetchone()
     own = viewer is not None and viewer["id"] == uid
-    if not p or not p["photo"] or (not own and (p["photo"] != 2 or p["status"] != "active")):
+    if not p or not p["st"] or (not own and (p["st"] != 2 or p["status"] != "active")):
         return h.reply(404, {"error": "not found"})
-    return send_photo(h, uid)
+    return send_photo(h, uid, kind)
 
 
-def drop_photo(uid):
+def drop_photo(uid, kind="photo"):
     try:
-        os.remove(photo_path(uid))
+        os.remove(photo_path(uid, kind))
     except OSError:
         pass
     with db() as c:
-        c.execute("UPDATE pros SET photo=0 WHERE user_id=?", (uid,))
+        c.execute(IMG[kind]["set"], (0, uid))
 
 
-def save_photo(h, u, d):
+def save_photo(h, u, d, kind="photo"):
     import base64
     try:
         raw = base64.b64decode(str(d.get("data") or "").split(",")[-1], validate=True)
     except Exception:
         return h.reply(400, {"error": "bad"})
-    # the browser re-encodes every photo to JPEG; anything else is refused (served back only as image/jpeg + nosniff)
-    if len(raw) < 200 or len(raw) > 500000 or raw[:3] != b"\xff\xd8\xff" or raw[-2:] != b"\xff\xd9":
+    # the browser re-encodes every image to JPEG; anything else is refused (served back only as image/jpeg + nosniff)
+    if len(raw) < 200 or len(raw) > IMG[kind]["max"] or raw[:3] != b"\xff\xd8\xff" or raw[-2:] != b"\xff\xd9":
         return h.reply(400, {"error": "type"})
-    with open(photo_path(u["id"]), "wb") as f:
+    with open(photo_path(u["id"], kind), "wb") as f:
         f.write(raw)
     with db() as c:
-        c.execute("UPDATE pros SET photo=1 WHERE user_id=?", (u["id"],))
+        c.execute(IMG[kind]["set"], (1, u["id"]))
     return h.reply(200, {"ok": True})
 
 
@@ -341,8 +440,8 @@ def handle(h, method, path):
 
 def route(h, method, path):
     sub = path[len("/api/m/"):]
-    if method == "POST" and sub == "photo":
-        d = h.body(900000)
+    if method == "POST" and sub in ("photo", "cover"):
+        d = h.body(1300000)
     else:
         d = h.body(20000) if method in ("POST", "PUT") else {}
     if method == "GET" and sub == "meta":
@@ -392,6 +491,8 @@ def route(h, method, path):
     u = session_user(h)
     if method == "GET" and sub.startswith("photo/"):
         return serve_photo(h, sub[6:], u)
+    if method == "GET" and sub.startswith("cover/"):
+        return serve_photo(h, sub[6:], u, "cover")
     if method == "GET" and (sub == "feed" or re.match(r"^requests/\d+$", sub)):
         return public_requests(h, sub, u)
     if method == "GET" and sub == "me":
@@ -403,6 +504,11 @@ def route(h, method, path):
         return h.reply(401, {"error": "login"})
     if method == "POST" and sub == "photo" and u["role"] == "pro":
         return save_photo(h, u, d)
+    if method == "POST" and sub == "cover" and u["role"] == "pro":
+        return save_photo(h, u, d, "cover")
+    if method == "POST" and sub == "cover/remove" and u["role"] == "pro":
+        drop_photo(u["id"], "cover")
+        return h.reply(200, {"ok": True})
     if method == "POST" and sub == "photo/remove" and u["role"] == "pro":
         drop_photo(u["id"])
         return h.reply(200, {"ok": True})
@@ -423,6 +529,8 @@ def route(h, method, path):
                              "signups": sum(1 for r in rows if r["request_id"] < 0), "orders": sum(1 for r in rows if r["request_id"] > 0),
                              "total": sum(r["amount"] for r in rows),
                              "reward": settings()["reward"]["amount"], "bonus": settings()["reward"]["bonus"]})
+    if sub in ("account", "mt/link", "mt/verify"):
+        return account_routes(h, method, sub, d, u)
     if sub == "chats" or sub.startswith("chats/"):
         return chat_routes(h, method, sub, d, u)
     if u["role"] == "client":
@@ -495,9 +603,9 @@ def level_taken(c, rid, pro_id, level):
 
 
 def feed_row(c, r, u):
-    au = c.execute("SELECT name FROM users WHERE id=?", (r["user_id"],)).fetchone()
+    au = c.execute("SELECT name, username FROM users WHERE id=?", (r["user_id"],)).fetchone()
     o = {"id": r["id"], "title": r["title"], "snippet": (r["descr"] or "")[:140], "category": r["category"], "level": r["level"],
-         "status": r["status"], "created": r["created"], "budget": r["budget"], "author": first_name(au["name"] if au else ""),
+         "status": r["status"], "created": r["created"], "budget": r["budget"], "author": public_name(au) if au else "",
          "bids": c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (r["id"],)).fetchone()[0],
          "chats": c.execute("SELECT COUNT(*) FROM chats WHERE request_id=?", (r["id"],)).fetchone()[0],
          "mine": u is not None and u["id"] == r["user_id"], "for_me": u is not None and r["tagged_pro"] == u["id"],
@@ -530,8 +638,8 @@ def public_requests(h, sub, u):
             return h.reply(404, {"error": "not found"})
         own = u is not None and u["id"] == r["user_id"]
         o = req_out(c, r, own, u["id"] if u else None)
-        au = c.execute("SELECT name FROM users WHERE id=?", (r["user_id"],)).fetchone()
-        o.update({"author": first_name(au["name"] if au else ""), "mine": own, "has_pro": bool(r["taken_pro"]),
+        au = c.execute("SELECT name, username FROM users WHERE id=?", (r["user_id"],)).fetchone()
+        o.update({"author": public_name(au) if au else "", "mine": own, "has_pro": bool(r["taken_pro"]),
                   "bids_count": c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (rid,)).fetchone()[0],
                   "chats_count": c.execute("SELECT COUNT(*) FROM chats WHERE request_id=?", (rid,)).fetchone()[0],
                   "viewer": "owner" if own else "guest"})
@@ -833,9 +941,9 @@ def admin(h, method, path):
 
 def admin_route(h, method, sub):
     d = h.body(20000) if method in ("POST", "PUT") else {}
-    if method == "GET" and sub.startswith("photo/"):
+    if method == "GET" and (sub.startswith("photo/") or sub.startswith("cover/")):
         try:
-            return send_photo(h, int(sub[6:]))
+            return send_photo(h, int(sub[6:]), sub[:5])
         except ValueError:
             return h.reply(404, {"error": "not found"})
     with db() as c:
@@ -854,7 +962,7 @@ def admin_route(h, method, sub):
                 o = {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "status": u["status"]}
                 if u["role"] == "pro":
                     p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
-                    o.update({"kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"], "photo": p["photo"], "links": p["links"], "level": p["level"],
+                    o.update({"kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"], "photo": p["photo"], "cover": p["cover"], "links": p["links"], "level": p["level"],
                               "founding": bool(p["founding_until"] and p["founding_until"] > time.time()),
                               "admin_rating": p["admin_rating"], "rating_count": p["rating_count"],
                               "client_rating": round(p["rating_sum"] / p["rating_count"], 1) if p["rating_count"] else None})
@@ -922,12 +1030,12 @@ def admin_route(h, method, sub):
                 return h.reply(400, {"error": "bad"})
             c.execute("UPDATE credits SET status=? WHERE id=?", (d["status"], int(d.get("id") or 0)))
             return h.reply(200, {"ok": True})
-        if method == "POST" and sub == "photo":
+        if method == "POST" and sub in ("photo", "cover"):
             uid = int(d.get("id") or 0)
             if d.get("ok") is True:
-                c.execute("UPDATE pros SET photo=2 WHERE user_id=? AND photo>0", (uid,))
+                c.execute(IMG[sub]["approve"], (uid,))
             else:
-                drop_photo(uid)
+                drop_photo(uid, sub)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "request/edit":
             rid = int(d.get("id") or 0)
