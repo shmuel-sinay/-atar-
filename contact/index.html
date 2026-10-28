@@ -14,7 +14,7 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/logo-180.png">
-<link rel="stylesheet" href="/assets/style.css?v=8ae11ae0">
+<link rel="stylesheet" href="/assets/style.css?v=a5961dfd">
 </head>
 <body>
 <header class="site"><div class="wrap">
@@ -40,7 +40,7 @@
 <script>
 (function(){
   var f=document.getElementById('cf'),m=document.getElementById('formmsg');
-  try{var pr=new URLSearchParams(location.search).get('product');if(pr){pr=pr.slice(0,60);var o=document.createElement('option');o.value='הזמנה: '+pr;o.textContent='הזמנה: '+pr;f.subject.insertBefore(o,f.subject.firstChild);f.subject.selectedIndex=0;if(!f.message.value)f.message.value='אני מעוניין ב'+pr+'. ';}}catch(e){}
+  try{var pr=new URLSearchParams(location.search).get('product');if(pr){pr=pr.slice(0,60);var o=document.createElement('option');o.value='הזמנה: '+pr;o.textContent='הזמנה: '+pr;f.subject.insertBefore(o,f.subject.firstChild);f.subject.selectedIndex=0;if(!f.message.value)f.message.value='אני מעוניין: '+pr+'. ';}var dt=new URLSearchParams(location.search).get('details');if(dt)f.message.value=(f.message.value+'\n'+dt.slice(0,1200)).trim()+'\n';}catch(e){}
   try{var q=new URLSearchParams(location.search).get('subject');if(q){for(var i=0;i<f.subject.options.length;i++){if(f.subject.options[i].value===q||f.subject.options[i].text===q){f.subject.selectedIndex=i}}}}catch(e){}
   f.addEventListener('submit',function(e){
     e.preventDefault();
@@ -62,5 +62,5 @@
   </div>
   <div class="legal">© כושר טק</div>
 </div></footer>
-<script src="/assets/site.js?v=d18de932" defer></script>
+<script src="/assets/site.js?v=e8b17283" defer></script>
 </body></html>

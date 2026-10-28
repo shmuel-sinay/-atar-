@@ -144,3 +144,19 @@ ul.feat li{background:var(--card);border:1px solid var(--line);border-inline-sta
 .qres ul{margin:0;padding-inline-start:20px;display:grid;gap:6px}
 .qlabel{font-size:.85rem;font-weight:700;color:var(--green)}
 .qwarn{color:#9a3412;font-weight:600}
+.intro2{display:grid;grid-template-columns:1.3fr .7fr;gap:24px 40px;align-items:start;margin-bottom:34px}
+.intro2 p{color:var(--ink-soft);font-size:1.08rem;margin:0 0 12px}
+.pros{list-style:none;margin:0;padding:18px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px;display:grid;gap:10px}
+.pros li::before{content:"✓";color:var(--green);font-weight:800;margin-inline-end:8px}
+@media (max-width:760px){.intro2{grid-template-columns:1fr}}
+.qopts.wide{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.qopt{display:grid;gap:4px}
+.qopt strong{font-weight:700}
+.qopt span{font-size:.88rem;color:var(--ink-soft);font-weight:400}
+.catgrid .catitem{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:6px;align-content:start}
+.catitem h3{margin:0;font-size:1.1rem}.catitem p{margin:0;color:var(--ink-soft)}
+.cbase{justify-self:start;font-size:.8rem;background:var(--gold-soft);border-radius:999px;padding:1px 10px}
+.whyc .card h3{margin:0 0 6px}.whyc .card p{margin:0;color:var(--ink-soft)}
+.qopt{position:relative}
+.qopt.on{border-color:var(--green)!important;background:color-mix(in srgb,var(--green) 14%,var(--card))!important;box-shadow:0 0 0 1px var(--green) inset}
+.qopt.on::after{content:"✓";position:absolute;top:10px;inset-inline-end:12px;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:.8rem;font-weight:800}

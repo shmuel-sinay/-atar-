@@ -30,35 +30,66 @@
     function key(e) { if (e.key === "Escape") close(); }
     w.addEventListener("click", close); document.addEventListener("keydown", key);
   }
-  // "עזרה בהתאמת נגן": plain questions, no technical words, ends with a player and a level
+  // what can be on a player: shown as a catalog on the shop page and used by the "עזרה בהתאמת נגן" questions
+  var CATALOG = [
+    { k: "listen", t: "שמיעה והקלטה", d: "נגן לשיעורים ולשירים, רדיו, רשמקול, וחיתוך של קטעי שמע.", base: true },
+    { k: "sfarim", t: "ספרי קודש", d: "סידור, תהילים, תנ\"ך, משניות, גמרא, הלכה וספרי מוסר. הכול בתוך הנגן." },
+    { k: "jewish", t: "עזרים ליהדות", d: "לוח עברי, ברכות, תפילת הדרך, מילון ארמי ועוד." },
+    { k: "tools", t: "כלים ליום יום", d: "מחשבון, פתקים, יומן, שעון מעורר, קורא מסמכים ומד צעדים.", base: true },
+    { k: "maps", t: "מפות וניווט", d: "מפות שעובדות בלי אינטרנט, וקווי אוטובוסים." },
+    { k: "voice", t: "הקראה וכתיבה בקול", d: "הנגן מקריא טקסט בעברית, ומקליד את מה שאומרים לו." },
+    { k: "translate", t: "תרגום", d: "תרגום מילים ומשפטים, גם בלי אינטרנט." },
+    { k: "music", t: "כלי נגינה", d: "אורגן, תופים, מכוון לגיטרה ולימוד תווים." },
+    { k: "games", t: "משחקים", d: "משחקים שקטים ומתאימים, מתוך רשימה שבדקנו." }
+  ];
+  var catbox = document.getElementById("catalog");
+  if (catbox) CATALOG.forEach(function (c) {
+    var a = el("article", "catitem"); a.appendChild(el("h3", null, c.t)); a.appendChild(el("p", null, c.d));
+    if (c.base) a.appendChild(el("span", "cbase", "יש כבר ברמה השמורה"));
+    catbox.appendChild(a);
+  });
+
+  // "עזרה בהתאמת נגן": a short friendly conversation, one question per screen
   var qbox = document.getElementById("quiz");
   if (qbox) {
-    var ans = {}, step = 0;
+    var ans = {}, step = -1;
+    var TIER = { none: "שמור", safe: "שמור עם חנות פנימית", any: "עם התקנה מבחוץ" };
     var Q = [
       { k: "who", q: "למי הנגן?", opts: [["me", "בשבילי"], ["child", "בשביל ילד או נער"], ["gift", "מתנה למישהו אחר"]] },
-      { k: "use", q: "בשביל מה הנגן?", hint: "אפשר לבחור כמה תשובות.", multi: true, opts: [
-        ["shiurim", "לשמוע שיעורים"], ["music", "לשמוע שירים וניגונים"], ["learn", "לחזור על לימוד"],
-        ["record", "להקליט"], ["games", "משחקים"], ["apps", "תוכנה מסוימת שאני צריך"]] },
-      { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["own", "רק סרטונים שאצלם בעצמי במכשיר"], ["yes", "כן, גם סרטונים מבחוץ"]] },
-      { k: "add", q: "תרצה להוסיף לו תוכנות בעתיד?", hint: "\"תוכנה\" כאן היא כל דבר שמוסיפים לנגן: למשל ספר שיעורים, לוח זמנים, או משהו לעבודה.", opts: [
-        ["none", "לא, מספיק לי מה שיש בו"], ["safe", "כן, אבל רק מרשימה בטוחה שבדקתם"], ["any", "כן, גם דברים שאביא בעצמי"]] },
-      { k: "cam", q: "צריך פנס או מצלמה?", hint: "אפשר לבחור גם את שניהם.", multi: true, none: "no", opts: [["light", "פנס"], ["cam", "מצלמה"], ["no", "לא צריך אף אחד"]] }
+      { k: "want", q: "מה היית רוצה שיהיה בנגן?", hint: "סמן כל מה שמעניין אותך. אם משהו לא ברור, זה בסדר: אפשר לשאול אותנו גם אחר כך.", multi: true,
+        opts: CATALOG.map(function (c) { return [c.k, c.t, c.d]; }) },
+      { k: "add", q: "ואחרי שתקבל אותו?", hint: "יש מי שרוצה נגן סגור לגמרי, ויש מי שרוצה להוסיף דברים בהמשך. מה מתאים לך?", opts: [
+        ["none", "שיישאר רק מה שבחרתי עכשיו", "הכי שמור. אי אפשר להוסיף שום דבר, ולכן גם אין מה לעקוף."],
+        ["safe", "שאוכל להוסיף בהמשך, מתוך רשימה שבדקתם", "יש בנגן חנות קטנה משלנו, ורק מה שבדקנו נמצא בה."],
+        ["any", "שאוכל להוסיף גם דברים שאביא בעצמי", "לשימוש מתקדם. עדיין בלי אינטרנט ובלי סרטים."]] },
+      { k: "cam", q: "צריך פנס או מצלמה?", hint: "אפשר לבחור גם את שניהם.", multi: true, none: "no", opts: [["light", "פנס"], ["cam", "מצלמה"], ["no", "לא צריך אף אחד"]] },
+      { k: "video", q: "ולגבי סרטונים", hint: "בנגנים שלנו אין סרטים ואין דרך להכניס סרטונים מבחוץ. זה בכוונה, ולא ישתנה.", opts: [
+        ["no", "מצוין, לא צריך"], ["own", "הייתי רוצה לראות רק מה שאני מצלם בעצמי", "את זה אפשר לבדוק: רק סרטונים שצולמו במכשיר עצמו."]] }
     ];
-    var TIER = { none: "שמור", safe: "שמור עם חנות פנימית", any: "עם התקנה מבחוץ" };
+    function optBtn(o, on) {
+      var b = el("button", "qopt" + (on ? " on" : "")); b.type = "button";
+      b.appendChild(el("strong", null, o[1])); if (o[2]) b.appendChild(el("span", null, o[2]));
+      return b;
+    }
     function draw() {
       qbox.textContent = "";
       var head = el("div", "qhead");
       head.appendChild(el("h2", null, "עזרה בהתאמת נגן"));
-      head.appendChild(el("p", null, "כמה שאלות פשוטות, ונמליץ על הנגן והרמה שמתאימים לך. לא צריך להבין בטכנולוגיה."));
       qbox.appendChild(head);
+      if (step < 0) {
+        head.appendChild(el("p", null, "לא צריך להבין בטכנולוגיה. נשאל כמה שאלות פשוטות, נראה לך מה אפשר שיהיה בנגן, ונמליץ על מה שמתאים לך. זה לוקח דקה."));
+        var go = el("button", "btn primary", "בוא נתחיל"); go.type = "button"; go.addEventListener("click", function () { step = 0; draw(); });
+        qbox.appendChild(go); return;
+      }
       if (step >= Q.length) return result();
       var cur = Q[step];
-      var bar = el("div", "qbar"); var fill = el("span"); fill.style.width = Math.round(step / Q.length * 100) + "%"; bar.appendChild(fill); qbox.appendChild(bar);
+      var bar = el("div", "qbar"); var fill = el("span"); fill.style.width = Math.round((step + 1) / (Q.length + 1) * 100) + "%"; bar.appendChild(fill); qbox.appendChild(bar);
       qbox.appendChild(el("h3", "qq", cur.q));
       if (cur.hint) qbox.appendChild(el("p", "qhint", cur.hint));
-      var opts = el("div", "qopts"), picked = (ans[cur.k] || []).slice ? (ans[cur.k] || []).slice() : [];
+      var opts = el("div", "qopts" + (cur.k === "want" ? " wide" : "")), picked = cur.multi ? (ans[cur.k] || []).slice() : [];
+      var next = el("button", "btn primary", "המשך"); next.type = "button";
       cur.opts.forEach(function (o) {
-        var b = el("button", "qopt" + (cur.multi && picked.indexOf(o[0]) >= 0 ? " on" : ""), o[1]); b.type = "button";
+        var b = optBtn(o, cur.multi && picked.indexOf(o[0]) >= 0);
         b.addEventListener("click", function () {
           if (!cur.multi) { ans[cur.k] = o[0]; step++; return draw(); }
           var i = picked.indexOf(o[0]); if (i >= 0) picked.splice(i, 1); else picked.push(o[0]);
@@ -70,36 +101,39 @@
       });
       qbox.appendChild(opts);
       var nav = el("div", "qnav");
-      if (step) { var back = el("button", "btn ghost", "חזרה"); back.type = "button"; back.addEventListener("click", function () { step--; draw(); }); nav.appendChild(back); }
-      if (cur.multi) { var next = el("button", "btn primary", "המשך"); next.type = "button"; next.disabled = !picked.length; next.addEventListener("click", function () { step++; draw(); }); nav.appendChild(next); }
+      if (cur.multi) { next.disabled = !picked.length; next.addEventListener("click", function () { step++; draw(); }); nav.appendChild(next); }
+      var back = el("button", "btn ghost", "חזרה"); back.type = "button"; back.addEventListener("click", function () { step--; draw(); }); nav.appendChild(back);
       qbox.appendChild(nav);
     }
     function result() {
-      var use = ans.use || [];
-      var cam = ans.cam || [];
+      var want = ans.want || [], cam = ans.cam || [], kid = ans.who === "child";
+      var extras = CATALOG.filter(function (c) { return want.indexOf(c.k) >= 0 && !c.base; });
+      var tier = TIER[ans.add] || "שמור";
+      var note = "";
+      if (extras.length && tier === "שמור") note = "מה שבחרת ייכנס לנגן מראש, וחוץ ממנו לא יהיה אפשר להוסיף דבר.";
+      if (kid && ans.add === "any") { tier = "שמור עם חנות פנימית"; note = "לילד או לנער אנחנו ממליצים להוסיף רק מתוך הרשימה שבדקנו, ולא מבחוץ."; }
       var plus = cam.indexOf("cam") >= 0 || cam.indexOf("light") >= 0 || ans.video === "own";
-      var player = plus ? "הזמיר פלוס" : "הזמיר", tier = TIER[ans.add] || "שמור";
-      var wantsApps = use.indexOf("apps") >= 0 || use.indexOf("games") >= 0;
-      if (wantsApps && tier === "שמור") tier = "שמור עם חנות פנימית";
-      var kid = ans.who === "child";
-      if (kid && ans.add === "any") tier = "שמור עם חנות פנימית";
+      var player = plus ? "הזמיר פלוס" : "הזמיר";
       var r = el("div", "qres");
       r.appendChild(el("span", "qlabel", "ההמלצה שלנו"));
       r.appendChild(el("h3", null, player + " · " + tier));
       var why = el("ul");
-      why.appendChild(el("li", null, plus ? "בזמיר פלוס יש פי שניים מקום, " + (cam.indexOf("cam") >= 0 && cam.indexOf("light") >= 0 ? "גם פנס וגם מצלמה." : cam.indexOf("cam") >= 0 ? "ומצלמה." : "ופנס. את המצלמה אפשר לסגור.") : "הזמיר קטן, פשוט ונוח, ומתאים בדיוק לשמיעה וללימוד."));
-      why.appendChild(el("li", null, tier === "שמור" ? "ברמה השמורה יש רק מה שצריך: נגן, רדיו, הקלטה ושיעורים. אי אפשר להוסיף שום דבר, ולכן אין מה לעקוף." :
-        tier === "שמור עם חנות פנימית" ? "אפשר להוסיף תוכנות, אבל רק מתוך רשימה שאנחנו בדקנו ואישרנו." : "אפשר להוסיף גם דברים מבחוץ, ועדיין אין בו אינטרנט ואין בו סרטים."));
-      if (kid && ans.add === "any") why.appendChild(el("li", null, "לילד או לנער אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
-      if (ans.who === "gift") why.appendChild(el("li", null, "למתנה: אפשר לשנות רמה גם אחרי שהנגן אצל מי שקיבל אותו."));
-      if (wantsApps) why.appendChild(el("li", null, (use.indexOf("games") >= 0 && use.indexOf("apps") >= 0 ? "משחקים ותוכנות" : use.indexOf("games") >= 0 ? "משחקים" : "את התוכנה שצריך") + " מוסיפים מתוך הרשימה הבטוחה שלנו" + (ans.add === "any" ? ", או מבחוץ לפי בחירתך." : ".")));
-      if (ans.video === "own") why.appendChild(el("li", null, "אפשר לבדוק גרסה שמאפשרת לראות רק סרטונים שצולמו במכשיר עצמו, בלי שום אפשרות להכניס סרטים מבחוץ. נבדוק את זה איתך בהזמנה."));
-      if (ans.video === "yes") why.appendChild(el("li", "qwarn", "סרטונים מבחוץ לא יהיו: אין אצלנו נגנים כאלה, וזה בכוונה. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו."));
-      why.appendChild(el("li", null, "בכל מקרה: בלי אינטרנט ובלי אפשרות להכניס סרטים, ואפשר לשנות רמה גם אחר כך."));
+      why.appendChild(el("li", null, plus ? "הזמיר פלוס: פי שניים מקום" + (cam.indexOf("light") >= 0 ? ", פנס" : "") + (cam.indexOf("cam") >= 0 ? ", מצלמה" : "") + "." + (cam.indexOf("cam") < 0 ? " את המצלמה נסגור." : "")
+        : "הזמיר: קטן, פשוט ונוח, ומתאים בדיוק למה שבחרת."));
+      why.appendChild(el("li", null, "מה שיהיה בנגן: " + CATALOG.filter(function (c) { return c.base || want.indexOf(c.k) >= 0; }).map(function (c) { return c.t; }).join(", ") + "."));
+      why.appendChild(el("li", null, tier === "שמור" ? "רמה שמורה: הנגן מגיע מוכן, ואי אפשר להוסיף לו כלום." :
+        tier === "שמור עם חנות פנימית" ? "חנות פנימית: אפשר להוסיף בהמשך, אבל רק ממה שבדקנו ואישרנו." : "התקנה מבחוץ: אפשר להוסיף גם דברים שתביא בעצמך."));
+      if (note) why.appendChild(el("li", null, note));
+      if (ans.video === "own") why.appendChild(el("li", null, "סרטונים שצילמת במכשיר: נבדוק את זה איתך כשנדבר."));
+      why.appendChild(el("li", null, "בכל נגן: בלי אינטרנט ובלי אפשרות להכניס סרטים. ואם תתחרט, אפשר לשנות אחר כך."));
       r.appendChild(why);
+      var details = ["נגן: " + player, "רמה: " + tier, "למי: " + ({ me: "בשבילי", child: "ילד או נער", gift: "מתנה" }[ans.who] || ""),
+        "מה שיהיה בנגן: " + CATALOG.filter(function (c) { return c.base || want.indexOf(c.k) >= 0; }).map(function (c) { return c.t; }).join(", "),
+        "פנס/מצלמה: " + (cam.indexOf("no") >= 0 ? "לא צריך" : cam.map(function (x) { return x === "cam" ? "מצלמה" : "פנס"; }).join(" ו")),
+        ans.video === "own" ? "סרטונים שצולמו במכשיר בלבד" : ""].filter(Boolean).join("\n");
       var acts = el("div", "qnav");
       var go = el("a", "btn primary", "להזמנה עם ההתאמה הזאת");
-      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (kid ? " · לילד או נער" : "") + (plus && cam.indexOf("cam") < 0 ? " · בלי מצלמה" : "") + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
+      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier) + "&details=" + encodeURIComponent(details);
       var again = el("button", "btn ghost", "להתחיל מחדש"); again.type = "button";
       again.addEventListener("click", function () { ans = {}; step = 0; draw(); });
       acts.appendChild(go); acts.appendChild(again); r.appendChild(acts);
