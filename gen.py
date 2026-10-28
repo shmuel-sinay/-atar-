@@ -17,7 +17,7 @@ ICONS = {
 }
 
 NAV = [("/", "בית"), ("/services/", "שירותים"), ("/android/", "אנדרואיד"), ("/shop/", "חנות"),
-       ("/request/", "בקשת פיתוח"), ("/chat/", "צ'אט"), ("/contact/", "צור קשר")]
+       ("/request/", "בקשת פיתוח"), ("/contact/", "צור קשר")]
 
 def head(title, desc, path):
     nav = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == path else "", t) for h, t in NAV)
@@ -170,13 +170,7 @@ r += f'''<section class="pagehead"><div class="wrap"><h1>בקשת פיתוח</h1
 '''
 r += foot()
 write("/request/", r)
-# ---------- CHAT ----------
-c = head("צ'אט | כושר טק", "פלטפורמת שיחה בין צ'אט לפורום.", "/chat/")
-c += f'''<section class="pagehead"><div class="wrap"><h1>צ'אט</h1><p>פלטפורמה בין צ'אט לפורום, בהקמה.</p></div></section>
-<section class="block"><div class="wrap"><div class="card" style="max-width:640px"><div class="ico">{ICONS["chat"]}</div><h3>בקרוב כאן</h3><p>הפרויקט נמצא בפיתוח ויעלה לכתובת הזו. רוצה לקבל הודעה כשהוא מוכן? השאר פרטים.</p><a class="btn primary" href="/contact/?subject=צ'אט">להשארת פרטים</a></div></div></section>
-'''
-c += foot()
-write("/chat/", c)
+# /chat/ is a separate project (built chat app), not linked from this site and not generated here.
 # ---------- CONTACT ----------
 k = head("צור קשר | כושר טק", "טופס פנייה, טלפון ומייל.", "/contact/")
 k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>השאר פרטים ונחזור אליך. אפשר גם להתקשר: <a href="tel:{PHONE_TEL}">{PHONE_DISPLAY}</a></p></div></section>
