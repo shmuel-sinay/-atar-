@@ -25,11 +25,16 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.__status = r.status; return j; }); });
   }
   function field(label, input) { return el("label", { cls: "mf" }, [el("span", { text: label }), input]); }
-  function select(map, value, any) {
+  function select(map, value, any, mapDisplay) {
     var s = el("select");
     if (any) s.appendChild(el("option", { value: "any", text: any }));
-    Object.keys(map).forEach(function (k) { var o = el("option", { value: k, text: map[k] }); if (k === value) o.selected = true; s.appendChild(o); });
+    Object.keys(map).forEach(function (k) { var o = el("option", { value: k, text: (mapDisplay || map)[k] }); if (k === value) o.selected = true; s.appendChild(o); });
     return s;
+  }
+  function levelNames() {
+    var names = {};
+    Object.keys(meta.levels).forEach(function (k) { names[k] = (meta.levels[k] || "").split(":")[0]; });
+    return names;
   }
   function msgBox() { return el("div", { cls: "mmsg", role: "status" }); }
   function stars(p) { return p.rating ? " · דירוג " + p.rating + (p.ratings ? " (" + p.ratings + ")" : "") : ""; }
@@ -499,7 +504,7 @@
     if (!me || me.role !== "client") return root.appendChild(note("פרסום בקשה זמין למבקשים רשומים."));
     root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה חדשה" }]));
     var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 6, maxLength: 3000 }), cat = select(meta.cats, meta.cats[preCat] ? preCat : "software"),
-      lvl = select(meta.levels, "any", "לא משנה"), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
+      lvl = select(meta.levels, "any", "לא משנה", levelNames()), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
     var m = msgBox(), tag = el("select"), only = el("input", { type: "checkbox" });
     tag.appendChild(el("option", { value: "", text: "ללא (פתוחה לכל אנשי המקצוע)" }));
