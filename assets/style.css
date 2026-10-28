@@ -197,3 +197,5 @@ ul.specs.chips li{background:color-mix(in srgb,var(--gold-soft) 55%,var(--card))
 .pcta{justify-self:stretch;text-align:center;font-size:1.05rem;padding-block:12px}
 @media (max-width:480px){.vtiles{grid-template-columns:1fr}}
 .product .btn.pcta{width:100%;justify-self:stretch}
+.qmodel{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:100%}
+[hidden]{display:none!important}
