@@ -35,16 +35,16 @@ DEFAULT = {
         {"id": "m393", "name": "הזמיר",
          "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מוכשר ומוכן לשמיעה וללימוד.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nBluetooth 5.0 ורדיו FM, מגיע בלי אינטרנט\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
          "price": "", "status": "out", "image": "/assets/products/zamir-set.jpg",
-         "gallery": ["/assets/products/zamir-set.jpg", "/assets/products/zamir-front.jpg"], "visible": True},
+         "gallery": ["/assets/products/zamir-set.jpg", "/assets/products/zamir-front.jpg"], "tiers": True, "visible": True},
         {"id": "m36plus", "name": "הזמיר פלוס",
          "desc": "הדגם המשודרג בסדרת הזמיר: אחסון כפול ופנס, מגיע מוכשר ומוכן לשמיעה וללימוד.\n32GB אחסון\nכרטיס זיכרון\nמצלמה ופנס (אפשר גם בלי מצלמה)\nכפתור ייעודי בצד המכשיר",
          "price": "", "status": "order", "image": "/assets/products/zamir-plus-front.jpg",
-         "gallery": ["/assets/products/zamir-plus-front.jpg", "/assets/products/zamir-plus-back.jpg"], "visible": True},
+         "gallery": ["/assets/products/zamir-plus-front.jpg", "/assets/products/zamir-plus-back.jpg"], "tiers": True, "visible": True},
         {"id": "other", "name": "דגמים נוספים", "desc": "יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.",
          "price": "לפי דגם", "status": "order", "image": "", "visible": True},
     ],
 }
-CATALOG = 4  # bump to roll new default products into an existing data file
+CATALOG = 5  # bump to roll new default products into an existing data file
 
 def secret():
     os.makedirs(DIR, exist_ok=True)
@@ -103,7 +103,7 @@ def clean_products(items):
         gal = [x for x in gal if x.startswith("/uploads/") or x.startswith("/assets/products/")]
         out.append({"id": clip(p.get("id"), 40) or uuid.uuid4().hex[:8], "name": clip(p.get("name"), 120),
                     "desc": clip(p.get("desc"), 600), "price": clip(p.get("price"), 60), "status": status,
-                    "image": img, "gallery": gal, "visible": bool(p.get("visible", True))})
+                    "image": img, "gallery": gal, "tiers": bool(p.get("tiers")), "visible": bool(p.get("visible", True))})
     return out
 
 def clean_services(d):
