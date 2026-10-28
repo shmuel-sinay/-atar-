@@ -17,7 +17,7 @@ ICONS = {
 }
 
 NAV = [("/", "בית"), ("/services/", "שירותים"), ("/android/", "אנדרואיד"), ("/shop/", "חנות"),
-       ("/request/", "בקשת פיתוח"), ("/contact/", "צור קשר")]
+       ("/request/", "בקשות ועבודות"), ("/contact/", "צור קשר")]
 
 def head(title, desc, path):
     nav = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == path else "", t) for h, t in NAV)
@@ -159,14 +159,15 @@ sh += f'''<section class="pagehead"><div class="wrap"><h1>חנות</h1><p>מוצ
 sh += foot()
 write("/shop/", sh)
 # ---------- REQUEST ----------
-r = head("בקשת פיתוח | כושר טק", "פלטפורמה לבקשת פיתוח תוכנה במחירים אוטומטיים.", "/request/")
-r += f'''<section class="pagehead"><div class="wrap"><h1>בקשת פיתוח</h1><p>פלטפורמה בהקמה: מבקשים תוכנה, ומפתחים מבצעים אותה במחירים שנקבעים אוטומטית.</p></div></section>
-<section class="block"><div class="wrap"><div class="grid c2">
-<article class="card"><div class="ico">{ICONS["code"]}</div><h3>מבקשים</h3><p>מתארים מה צריך, מקבלים מחיר מיידי וממתינים לביצוע. בלי מו"מ ובלי הפתעות.</p><p><span class="price" data-svc="request">מחיר אוטומטי</span></p></article>
-<article class="card"><div class="ico">{ICONS["bolt"]}</div><h3>מבצעים</h3><p>מפתחים בוחרים בקשות שמתאימות להם ומקבלים תמורה לפי מחירון האתר.</p></article>
+r = head("בקשות ועבודות | כושר טק", "לוח בקשות ועבודות: מפרסמים מה צריך, ואנשי מקצוע וחברות לוקחים את העבודה.", "/request/")
+r += f'''<section class="pagehead"><div class="wrap"><h1>בקשות ועבודות</h1><p>צריך עזרה במשהו? מפרסמים בקשה, ואנשי מקצוע וחברות מהתחום לוקחים אותה. בלי מתווכים ובלי הפתעות.</p></div></section>
+<section class="block"><div class="wrap"><div class="grid c3">
+<article class="card"><div class="ico">{ICONS["chat"]}</div><h3>מפרסמים בקשה</h3><p>כותבים מה צריך: תוכנה, אתר, עיצוב, כתיבה, התאמת מכשיר, עזרה טכנית או כל עבודה אחרת, ואפשר להוסיף תקציב וזמן רצוי.</p></article>
+<article class="card"><div class="ico">{ICONS["shield"]}</div><h3>אנשי מקצוע נבחרים</h3><p>הגישה לבקשות פתוחה רק לאנשי מקצוע וחברות שאושרו, כדי לשמור על רמה ועל אמינות.</p></article>
+<article class="card"><div class="ico">{ICONS["bolt"]}</div><h3>לוקחים ומבצעים</h3><p>איש מקצוע בוחר בקשה שמתאימה לו, מציע מחיר וזמן, ומתאם ישירות עם מי שביקש. פרטי הקשר נחשפים רק לאחר שהעבודה נלקחה.</p></article>
 </div>
-<div class="note" style="margin-top:24px"><strong>בקרוב.</strong> בינתיים אפשר לשלוח בקשת פיתוח ישירות בטופס הפנייה, ונחזור עם מחיר.</div>
-<p style="margin-top:20px"><a class="btn primary" href="/contact/?subject=פיתוח">שליחת בקשה</a></p></div></section>
+<div class="note" style="margin-top:24px"><strong>בהקמה.</strong> עד שהלוח יעלה, אפשר לשלוח בקשה בטופס הפנייה, ונחזור עם מענה. מי שרוצה להצטרף כאיש מקצוע או כחברה מוזמן להשאיר פרטים.</div>
+<p style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap"><a class="btn primary" href="/contact/?subject=פיתוח">שליחת בקשה</a><a class="btn ghost" style="color:var(--green)" href="/contact/?subject=אחר">הצטרפות כאיש מקצוע</a></p></div></section>
 '''
 r += foot()
 write("/request/", r)
@@ -180,7 +181,7 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
   <label>טלפון או מייל<input name="contact" autocomplete="tel" required></label>
   <label>במה מדובר<select name="subject">
     <option>התאמת אנדרואיד</option><option>התקנת מחשב</option><option>תוכנה בהתאמה אישית</option>
-    <option>בניית אתר</option><option>חנות / מוצרים</option><option value="פיתוח">בקשת פיתוח</option><option>אחר</option></select></label>
+    <option>בניית אתר</option><option>חנות / מוצרים</option><option value="פיתוח">בקשה / עבודה</option><option>אחר</option></select></label>
   <label>פרטים<textarea name="message" rows="5" required></textarea></label>
   <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
   <button class="btn primary" type="submit">שליחה</button>

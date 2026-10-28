@@ -86,3 +86,5 @@ footer.site .legal{border-top:1px solid #ffffff22;margin-top:26px;padding-top:16
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .stock.ok{background:#d4ecdc;color:#0f4a37}
 .pimg{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;margin-bottom:12px;background:var(--gold-soft)}
+.grid.c2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:760px){.grid.c2{grid-template-columns:1fr}}
