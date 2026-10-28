@@ -3,7 +3,7 @@ import os, re, html, hashlib
 OUT = os.environ.get("KT_OUT", ".")
 PHONE_DISPLAY = "055-440-7560"
 PHONE_TEL = "0554407560"
-EMAIL = "g47ben@gmail.com"
+EMAIL = "kt3182319@gmail.com"
 
 ICONS = {
  "phone": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
@@ -13,6 +13,9 @@ ICONS = {
  "shield": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>',
  "box": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
  "chat": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+ "lang": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h9M8.5 3v2M6 5c0 4 2.5 7 6 8M11 5c0 4-3 8-7 9"/><path d="m13 21 4-9 4 9M14.5 18h5"/></svg>',
+ "pen": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><circle cx="11" cy="11" r="2"/></svg>',
+ "music": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
  "bolt": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
 }
 
@@ -112,12 +115,13 @@ home += f'''
   <p class="sub">המומחיות היא עריכת אנדרואיד. בתוכנות ובאפליקציות היתרון הוא מהירות ומחיר.</p>
   <div class="grid c3">
     {card("shield","עריכת מכשירי אנדרואיד","ההתמחות המרכזית. עבודות שטכנאי רגיל לא יודע לבצע, או שאצלו לא שוות את המחיר.",["חסימה וניהול מכשיר (MDM)","רוט ועריכת המערכת מבפנים","קושחה ייעודית ונגנים מותאמים","סינון בכל רמה, בהתאמה לציבור"],price="מחירים שפויים",link="/android/",svc="android")}
-    {card("phone","אפליקציות אנדרואיד","אפליקציה ייעודית לעסק, לישיבה, לנגן או לשימוש אישי. מוכנה מהר, במחיר שאי אפשר להתחרות בו.",["אפליקציות חדשות מאפס","התאמה ושיפור של אפליקציות קיימות","אפליקציות למכשירים סגורים ומסוננים"],link="/contact/?subject=פיתוח",svc="software")}
+    {card("phone","אפליקציות אנדרואיד","אפליקציה ייעודית לעסק, לישיבה, לנגן או לשימוש אישי. מוכנה מהר, במחיר שאי אפשר להתחרות בו.",["אפליקציות חדשות מאפס","התאמה ושיפור של אפליקציות קיימות","אפליקציות למכשירים סגורים ומסוננים"],link="/contact/?subject=פיתוח",svc="apps")}
     {card("code","תוכנות למחשב","כלי שעושה בדיוק את מה שצריך. מהר וזול, בלי לשלם סכומי עתק למתכנת.",["תוכנות וכלים בהתאמה אישית","אוטומציה של עבודה משרדית, אקסל וקבצים","כלים לעסקים, למוסדות ולגמ\"חים"],link="/contact/?subject=פיתוח",svc="software")}
     {card("win","מחשבים ו-Office","התאמת מחשבים חדשים והתקנת Windows ו-Office, נקי ומסודר.",["התקנה נקייה","סינון והגדרות","דרייברים ותוכנות"],link="/services/",svc="computers")}
     {card("globe","בניית אתרים","אתר עסקי מהיר ומכובד, בלי תלות בספקים יקרים.",["עיצוב מותאם","טופס פנייה למייל","קל לעדכון"],link="/contact/?subject=אתר",svc="websites")}
-    {card("box","נגנים מותאמים","נגני אנדרואיד שנבחרו בקפידה, מגיעים מוכנים ומותאמים לפי בקשה.",None,link="/shop/",svc="shop")}
+    {card("music","הכשרת נגנים","כל סוגי הנגנים, מוכנים ומסוננים לפי מה שמתאים לך. ויש גם נגנים למכירה.",["בלי אינטרנט, או רק מה שאישרת","העלאת שיעורים ותכנים"],link="/shop/",svc="players")}
   </div>
+  <p class="more-svc">ועוד: תרגום אפליקציות ומשחקים לעברית · עיצוב לוגו, פרסומות ותמונות · תוספים וסקריפטים · <a href="/services/">לכל השירותים והמחירון ←</a></p>
 </div></section>
 
 <section class="block alt"><div class="wrap">
@@ -143,15 +147,25 @@ home += foot()
 write("/", home)
 # ---------- SERVICES ----------
 s = head("שירותים | כושר טק: אפליקציות, תוכנות, התאמת אנדרואיד ומחשבים",
-         "כל השירותים של כושר טק: פיתוח אפליקציות אנדרואיד ותוכנות למחשב במחירי רצפה, התאמת מכשירי אנדרואיד בכל הרמות, התקנות מחשב ובניית אתרים.", "/services/")
+         "כל השירותים של כושר טק ומחירון: עריכת מכשירי אנדרואיד והכשרת נגנים, אפליקציות ותוכנות למחשב, תרגום אפליקציות ומשחקים, עיצוב לוגו ופרסומות, תוספים, אתרים ומחשבים.", "/services/")
 s += '''<section class="pagehead"><div class="wrap"><h1>השירותים שלנו</h1><p>המומחיות: עריכת אנדרואיד שטכנאי רגיל לא מגיע אליה. בתוכנות, באפליקציות ובאתרים: מהירות ומחירי רצפה שאי אפשר להתחרות בהם.</p></div></section>
 <section class="block"><div class="wrap"><div class="grid c2">'''
 s += card("shield","עריכת מכשירי אנדרואיד","ההתמחות המרכזית: עבודות שטכנאי רגיל לא יודע לבצע, או שאצלו לא שוות את המחיר.",["חסימה וניהול מכשיר (MDM) בלי פריצה","רוט ושליטה מלאה במערכת","קושחה ייעודית מוכנה לצריבה","סינון: בלי אינטרנט, אינטרנט מסונן או רשימה סגורה"],link="/android/",svc="android")
-s += card("phone","פיתוח אפליקציות אנדרואיד","אפליקציה שעושה בדיוק את מה שצריך, מוכנה מהר עם מיטב הכלים המתקדמים, ובמחיר שאי אפשר להתחרות בו.",["אפליקציות חדשות מאפס","התאמה ושיפור של אפליקציות קיימות","אפליקציות למכשירים סגורים, נגנים ומכשירי שיעורים","מחירי רצפה, בלי פשרה על איכות"],link="/contact/?subject=פיתוח",svc="software")
+s += card("phone","פיתוח אפליקציות אנדרואיד","אפליקציה שעושה בדיוק את מה שצריך, מוכנה מהר עם מיטב הכלים המתקדמים, ובמחיר שאי אפשר להתחרות בו.",["אפליקציות חדשות מאפס","התאמה ושיפור של אפליקציות קיימות","אפליקציות למכשירים סגורים, נגנים ומכשירי שיעורים","מחירי רצפה, בלי פשרה על איכות"],link="/contact/?subject=פיתוח",svc="apps")
 s += card("code","תוכנות למחשב","צריך כלי שיחסוך לך שעות עבודה? מקבלים אותו מהר ובזול.",["תוכנות וכלים בהתאמה אישית","אוטומציה לאקסל, קבצים ועבודה משרדית","כלים לעסקים, מוסדות וגמ\"חים"],link="/contact/?subject=פיתוח",svc="software")
 s += card("win","התאמת מחשבים והתקנת Office","התאמת מחשבים חדשים והתקנת Windows ו-Office, נקי, מהיר ומסודר.",["התאמת מחשבים חדשים","התקנת Windows","התקנת Office","דרייברים, הגדרות והסרת תוכנות מיותרות"],svc="computers")
 s += card("globe","בניית אתרים","אתר עסקי או אישי, נקי וקל לתחזוקה.",["עיצוב מותאם","אחסון וכתובת","טופס פנייה למייל"],svc="websites")
+s += card("music","הכשרת נגנים","נגן אנדרואיד שמגיע מוכן ומסונן, בדיוק לפי מה שמתאים לך.",["כל סוגי הנגנים","בלי אינטרנט, או רק מה שאישרת","העלאת שיעורים ותכנים"],link="/contact/?subject=אנדרואיד",svc="players")
+s += card("lang","תרגום אפליקציות ומשחקים","אפליקציה או משחק בעברית מלאה ומסודרת, גם כשאין גרסה רשמית בעברית.",["תרגום ממשק ותוכן","התאמה לכתיבה מימין לשמאל","גם לאפליקציות סגורות"],link="/contact/?subject=פיתוח",svc="translate")
+s += card("pen","עיצוב: לוגו, פרסומות ותמונות","עיצוב מקצועי ונקי, בהתאמה לציבור ולמותג שלך.",["לוגו ומיתוג","מודעות ופרסומות","תמונות ובאנרים לאתר"],link="/contact/?subject=אחר",svc="design")
+s += card("bolt","תוספים וסקריפטים","כלי קטן שחוסך עבודה: תוסף לדפדפן, סקריפט או אוטומציה.",["תוספים לדפדפן","סקריפטים ואוטומציות","מהיר וזול במיוחד"],link="/contact/?subject=פיתוח",svc="scripts")
 s += '''</div></div></section>
+<section class="block alt"><div class="wrap">
+<h2 class="title">מחירון</h2>
+<p class="sub">המחירים מתעדכנים מעת לעת. כל עבודה מקבלת הצעה ברורה מראש.</p>
+<div class="plist"><div><span>עריכת מכשירי אנדרואיד</span><span class="price" data-svc="android">במחיר רצפה</span></div><div><span>הכשרת נגנים</span><span class="price" data-svc="players">במחיר רצפה</span></div><div><span>אפליקציות אנדרואיד</span><span class="price" data-svc="apps">במחיר רצפה</span></div><div><span>תוכנות למחשב</span><span class="price" data-svc="software">במחיר רצפה</span></div><div><span>תוספים וסקריפטים</span><span class="price" data-svc="scripts">במחיר רצפה</span></div><div><span>תרגום אפליקציות ומשחקים</span><span class="price" data-svc="translate">במחיר רצפה</span></div><div><span>עיצוב: לוגו, פרסומות ותמונות</span><span class="price" data-svc="design">במחיר רצפה</span></div><div><span>בניית אתרים</span><span class="price" data-svc="websites">במחיר רצפה</span></div><div><span>מחשבים ו-Office</span><span class="price" data-svc="computers">במחיר רצפה</span></div></div>
+<a class="btn primary" style="margin-top:18px" href="/contact/">קבלת הצעה</a>
+</div></section>
 '''
 s += foot()
 write("/services/", s)
