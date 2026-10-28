@@ -23,7 +23,9 @@ DEFAULT_SETTINGS = {
     "base": {"software": 300, "website": 400, "device": 150, "design": 200, "writing": 100, "help": 80, "other": 150},
     "level_mult": {"basic": 1.0, "pro": 1.8, "secure": 2.8},
     "size_mult": {"small": 1.0, "medium": 2.2, "large": 4.5},
+    "reward": {"amount": 20.0},
 }
+UNIT = "קרדיטים"
 STATUS_REQ = ("review", "open", "taken", "done", "closed")
 
 
@@ -51,10 +53,12 @@ def init(secret, directory):
         CREATE TABLE IF NOT EXISTS chat_msgs(id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL, sender_id INTEGER NOT NULL,
           text TEXT NOT NULL, created INTEGER NOT NULL);
         CREATE INDEX IF NOT EXISTS chat_msgs_chat ON chat_msgs(chat_id, id);
+        CREATE TABLE IF NOT EXISTS credits(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, referred_id INTEGER NOT NULL,
+          request_id INTEGER NOT NULL UNIQUE, amount REAL NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS ratings(request_id INTEGER PRIMARY KEY, pro_id INTEGER NOT NULL, stars INTEGER NOT NULL,
           text TEXT, created INTEGER NOT NULL);
         """)
-        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
+        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
                      "ALTER TABLE requests ADD COLUMN tagged_pro INTEGER", "ALTER TABLE requests ADD COLUMN only_tagged INTEGER NOT NULL DEFAULT 0"):
             try:
                 c.execute(stmt)
@@ -114,6 +118,22 @@ def check_pw(pw, stored):
         return hmac.compare_digest(got.hex(), h)
     except Exception:
         return False
+
+
+def new_code(c):
+    import secrets
+    while True:
+        code = secrets.token_hex(4)
+        if not c.execute("SELECT 1 FROM users WHERE ref_code=?", (code,)).fetchone():
+            return code
+
+
+def ensure_code(c, u):
+    if u["ref_code"]:
+        return u["ref_code"]
+    code = new_code(c)
+    c.execute("UPDATE users SET ref_code=? WHERE id=?", (code, u["id"]))
+    return code
 
 
 def make_session(uid):
@@ -291,6 +311,15 @@ def route(h, method, path):
                       (d.get("kind") if d.get("kind") in ("individual", "company") else "individual",
                        clip(d.get("field"), 80), clip(d.get("bio"), 600), clip(d.get("exp"), 200), clean_links(d.get("links")), u["id"]))
         return h.reply(200, {"ok": True})
+    if method == "GET" and sub == "partner":
+        with db() as c:
+            code = ensure_code(c, u)
+            rows = c.execute("SELECT amount, status, created FROM credits WHERE user_id=? ORDER BY id DESC", (u["id"],)).fetchall()
+            n = c.execute("SELECT COUNT(*) FROM users WHERE referred_by=?", (u["id"],)).fetchone()[0]
+        tot = {k: sum(r["amount"] for r in rows if r["status"] == k) for k in ("pending", "approved", "paid")}
+        return h.reply(200, {"code": code, "referred": n, "unit": UNIT, "totals": tot,
+                             "credits": [{"amount": r["amount"], "status": r["status"], "at": r["created"]} for r in rows],
+                             "reward": settings()["reward"]["amount"]})
     if sub == "chats" or sub.startswith("chats/"):
         return chat_routes(h, method, sub, d, u)
     if u["role"] == "client":
@@ -316,8 +345,10 @@ def register(h, d):
     with db() as c:
         if c.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
             return h.reply(409, {"error": "exists"})
-        cur = c.execute("INSERT INTO users(email,name,pw,role,status,created,terms_at) VALUES(?,?,?,?,?,?,?)",
-                        (email, name, hash_pw(pw), role, status, int(time.time()), int(time.time())))
+        ref = clip(d.get("ref"), 20)
+        refu = c.execute("SELECT id FROM users WHERE ref_code=?", (ref,)).fetchone() if ref else None
+        cur = c.execute("INSERT INTO users(email,name,pw,role,status,created,terms_at,ref_code,referred_by) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (email, name, hash_pw(pw), role, status, int(time.time()), int(time.time()), new_code(c), refu["id"] if refu else None))
         uid = cur.lastrowid
         if role == "pro":
             c.execute("INSERT INTO pros(user_id,kind,field,bio,exp,links) VALUES(?,?,?,?,?,?)",
@@ -404,6 +435,7 @@ def client_routes(h, method, sub, d, u):
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/done" and r["status"] == "taken":
             c.execute("UPDATE requests SET status='done' WHERE id=?", (rid,))
+            award(c, u, rid)
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "requests/close" and r["status"] in ("review", "open"):
             c.execute("UPDATE requests SET status='closed' WHERE id=?", (rid,))
@@ -462,6 +494,21 @@ def pro_routes(h, method, sub, d, u):
                       (rid, u["id"], price, days, clip(d.get("note"), 600), int(time.time())))
             return h.reply(200, {"ok": True})
     return h.reply(404, {"error": "not found"})
+
+
+def award(c, client, rid):
+    """A partner earns one pending reward when the client he brought gets his first job done."""
+    ref = client["referred_by"]
+    if not ref or ref == client["id"]:
+        return
+    if c.execute("SELECT COUNT(*) FROM requests WHERE user_id=? AND status='done'", (client["id"],)).fetchone()[0] != 1:
+        return
+    if not c.execute("SELECT 1 FROM users WHERE id=? AND status='active'", (ref,)).fetchone():
+        return
+    amount = settings()["reward"]["amount"]
+    if amount > 0:
+        c.execute("INSERT OR IGNORE INTO credits(user_id,referred_id,request_id,amount,created) VALUES(?,?,?,?,?)",
+                  (ref, client["id"], rid, amount, int(time.time())))
 
 
 def pro_can_see(r, uid, rank):
@@ -587,7 +634,13 @@ def admin_route(h, method, sub):
                 o["bids_count"] = c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (r["id"],)).fetchone()[0]
                 reqs.append(o)
             reqs.sort(key=lambda x: (order.get(x["status"], 9), -x["id"]))
-            return h.reply(200, {"users": users, "requests": reqs, "settings": settings(), "labels": {"cats": CATS, "levels": LEVELS, "sizes": SIZES}})
+            credits = []
+            for cr in c.execute("SELECT * FROM credits ORDER BY (status='pending') DESC, id DESC LIMIT 300").fetchall():
+                a = c.execute("SELECT name, email FROM users WHERE id=?", (cr["user_id"],)).fetchone()
+                b = c.execute("SELECT name FROM users WHERE id=?", (cr["referred_id"],)).fetchone()
+                credits.append({"id": cr["id"], "amount": cr["amount"], "status": cr["status"], "partner": a["name"] if a else "", "email": a["email"] if a else "",
+                                "referred": b["name"] if b else "", "at": cr["created"]})
+            return h.reply(200, {"users": users, "requests": reqs, "credits": credits, "unit": UNIT, "settings": settings(), "labels": {"cats": CATS, "levels": LEVELS, "sizes": SIZES}})
         if method == "POST" and sub == "user":
             uid = int(d.get("id") or 0)
             u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
@@ -604,6 +657,11 @@ def admin_route(h, method, sub):
                     except Exception:
                         v = None
                     c.execute("UPDATE pros SET admin_rating=? WHERE user_id=?", (v, uid))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "credit":
+            if d.get("status") not in ("pending", "approved", "paid", "rejected"):
+                return h.reply(400, {"error": "bad"})
+            c.execute("UPDATE credits SET status=? WHERE id=?", (d["status"], int(d.get("id") or 0)))
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "photo":
             uid = int(d.get("id") or 0)

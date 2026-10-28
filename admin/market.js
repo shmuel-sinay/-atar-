@@ -80,6 +80,20 @@
     });
     if (!data.requests.length) rl.appendChild(el("p", { cls: "meta", text: "אין בקשות." }));
 
+    var cl = document.getElementById("clist"); cl.textContent = "";
+    var CS = { pending: "ממתין", approved: "אושר", paid: "שולם", rejected: "נדחה" };
+    document.getElementById("pcount").textContent = data.credits.filter(function (c) { return c.status === "pending"; }).length ? "(" + data.credits.filter(function (c) { return c.status === "pending"; }).length + ")" : "";
+    data.credits.forEach(function (c) {
+      var acts = el("div", { cls: "act" });
+      function setC(st) { call("POST", "credit", { id: c.id, status: st }).then(function () { note("נשמר"); load(); }); }
+      if (c.status !== "approved" && c.status !== "paid") acts.appendChild(btn("אישור", function () { setC("approved"); }));
+      if (c.status === "approved") acts.appendChild(btn("סימון כשולם", function () { setC("paid"); }));
+      if (c.status !== "rejected" && c.status !== "paid") acts.appendChild(btn("דחייה", function () { setC("rejected"); }, true));
+      cl.appendChild(el("div", { cls: "box" }, [el("strong", { text: c.partner + " · " + c.amount + " " + data.unit }),
+        el("div", { cls: "meta", text: CS[c.status] + " · הביא את: " + c.referred + " · " + c.email }), acts]));
+    });
+    if (!data.credits.length) cl.appendChild(el("p", { cls: "meta", text: "אין תגמולים עדיין. תגמול נוצר כשהעבודה הראשונה של מבקש שהוזמן מסתיימת." }));
+
     var eb = document.getElementById("elist"); eb.textContent = "";
     var inputs = {};
     function group(title, part, labels, hint) {
@@ -94,9 +108,10 @@
     group("מחיר בסיס לפי תחום (ש\"ח)", "base", CATMAP, "עבודה קטנה ברמה בסיסית.");
     group("מכפיל לפי רמה", "level_mult", LEVELMAP, "מוכפל במחיר הבסיס.");
     group("מכפיל לפי גודל", "size_mult", SIZEMAP, "מוכפל במחיר הבסיס.");
+    group("תגמול שותפים", "reward", { amount: "תגמול לכל מבקש חדש (" + data.unit + ")" }, "נוצר כשהעבודה הראשונה של מבקש שהוזמן מסתיימת, ומחכה לאישורך.");
     eb.appendChild(el("p", { cls: "meta", text: "ההערכה שמוצגת: בסיס × רמה × גודל, בטווח של 80% עד 130%." }));
     document.getElementById("saveest").onclick = function () {
-      var out = { base: {}, level_mult: {}, size_mult: {} };
+      var out = { base: {}, level_mult: {}, size_mult: {}, reward: {} };
       Object.keys(inputs).forEach(function (k) { var p = k.split("."); out[p[0]][p[1]] = Number(inputs[k].value); });
       call("PUT", "settings", out).then(function () { note("נשמר"); load(); }).catch(function () { note("השמירה נכשלה"); });
     };
@@ -104,7 +119,7 @@
   function load() { return call("GET", "overview").then(function (d) { data = d; render(); }).catch(function () {}); }
 
   document.querySelectorAll(".tabs button").forEach(function (b) {
-    b.addEventListener("click", function () { if (["users", "mreq", "est"].indexOf(b.dataset.tab) >= 0) load(); });
+    b.addEventListener("click", function () { if (["users", "mreq", "partners", "est"].indexOf(b.dataset.tab) >= 0) load(); });
   });
 
   // load once the admin shell is visible (it logs in or restores the session itself)

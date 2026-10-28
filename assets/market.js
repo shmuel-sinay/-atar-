@@ -2,6 +2,11 @@
   var root = document.getElementById("mk");
   var meta = { cats: {}, levels: {}, sizes: {} };
   var me = null;
+  try {
+    var rq = new URLSearchParams(location.search).get("ref");
+    if (rq && /^[0-9a-f]{4,20}$/.test(rq)) localStorage.setItem("mk_ref", rq);
+  } catch (e) {}
+  function savedRef() { try { return localStorage.getItem("mk_ref") || ""; } catch (e) { return ""; } }
   var STATUS = { review: "ממתינה לאישור הנהלה", open: "פתוחה להצעות", taken: "נלקחה", done: "בוצעה", closed: "סגורה" };
 
   function el(tag, props, kids) {
@@ -82,6 +87,24 @@
     }
     var timer = setInterval(load, 15000);
     setTimeout(load, 0);
+    return box;
+  }
+
+  var CSTAT = { pending: "ממתין לאישור", approved: "אושר", paid: "שולם", rejected: "נדחה" };
+  function partnerBox() {
+    var box = el("section", { cls: "card mk-sec" });
+    api("GET", "partner").then(function (p) {
+      if (!p.code) return;
+      var link = location.origin + location.pathname + "?ref=" + p.code;
+      var inp = el("input", { value: link, readOnly: true });
+      var cp = el("button", { cls: "btn ghost sm", type: "button", text: "העתקה" });
+      cp.addEventListener("click", function () { inp.select(); try { navigator.clipboard.writeText(link); } catch (e) {} cp.textContent = "הועתק"; });
+      box.appendChild(el("h3", { text: "תוכנית שותפים" }));
+      box.appendChild(el("p", { text: "מביאים מבקש חדש ללוח ומקבלים תגמול (" + p.reward + " " + p.unit + ") כשהעבודה הראשונה שלו מסתיימת. התגמול מאושר ידנית על ידי ההנהלה." }));
+      box.appendChild(el("div", { cls: "mk-bidform" }, [inp, cp]));
+      box.appendChild(el("p", { cls: "meta", text: "נרשמו דרכך: " + p.referred + " · ממתין: " + p.totals.pending + " · אושר: " + p.totals.approved + " · שולם: " + p.totals.paid + " (" + p.unit + ")" }));
+      p.credits.forEach(function (c) { box.appendChild(el("div", { cls: "meta", text: c.amount + " " + p.unit + " · " + CSTAT[c.status] })); });
+    });
     return box;
   }
 
@@ -167,7 +190,7 @@
       b.addEventListener("click", function () {
         m.textContent = "";
         if (!agree.checked) { m.textContent = "יש לקרוא את כללי הלוח עד הסוף ולאשר אותם."; return; }
-        var body = { role: role, name: name.value, email: email.value, password: pw.value, agree: true };
+        var body = { role: role, name: name.value, email: email.value, password: pw.value, agree: true, ref: savedRef() };
         if (role === "pro") { body.kind = kind.value; body.field = fld.value; body.exp = expi.value; body.bio = bio.value; body.links = links.value; }
         api("POST", "register", body).then(function (r) {
           if (r.ok) return load();
@@ -203,6 +226,7 @@
   function clientView() {
     var box = el("div");
     box.appendChild(chatsStrip());
+    box.appendChild(partnerBox());
     var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 5, maxLength: 3000 }), cat = select(meta.cats, "software"),
       lvl = select(meta.levels, "any", "לא משנה"), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
@@ -306,6 +330,7 @@
     var out = el("div");
     box.appendChild(chatsStrip());
     box.appendChild(out);
+    box.appendChild(partnerBox());
     box.appendChild(proProfile(me.profile));
     function refresh() {
       api("GET", "board").then(function (b) {
