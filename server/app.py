@@ -5,9 +5,12 @@ Admin:   POST /api/admin/login|logout, GET|PUT /api/admin/data,
          GET /api/admin/messages, POST /api/admin/messages/delete, POST /api/admin/upload
 Env: KT_ADMIN_PASS (required for admin), KT_SMTP_USER, KT_SMTP_PASS, KT_MAIL_TO
 """
-import base64, hashlib, hmac, json, os, secrets, smtplib, threading, time, uuid
+import base64, hashlib, hmac, json, os, secrets, smtplib, sys, threading, time, uuid
 from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import market
 
 PORT = int(os.environ.get("KT_PORT", "8099"))
 DIR = os.environ.get("KT_DIR", "/var/lib/kt-contact")
@@ -178,11 +181,15 @@ class H(BaseHTTPRequestHandler):
             return self.reply(200, [x for x in d["products"] if x.get("visible", True)])
         if p == "/api/services":
             return self.reply(200, load_data()["services"])
+        if p.startswith("/api/m/"):
+            return market.handle(self, "GET", p)
         if p.startswith("/api/admin"):
             if not ADMIN_PASS:
                 return self.reply(503, {"error": "admin disabled"})
             if not self.authed():
                 return self.reply(401, {"error": "login"})
+            if p.startswith("/api/admin/m/"):
+                return market.admin(self, "GET", p)
             if p == "/api/admin/data":
                 return self.reply(200, load_data())
             if p == "/api/admin/messages":
@@ -193,6 +200,12 @@ class H(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         p = self.path_only()
+        if p.startswith("/api/m/"):
+            return market.handle(self, "PUT", p)
+        if p.startswith("/api/admin/m/"):
+            if not ADMIN_PASS or not self.authed():
+                return self.reply(401, {"error": "login"})
+            return market.admin(self, "PUT", p)
         if p == "/api/admin/data":
             if not ADMIN_PASS or not self.authed():
                 return self.reply(401, {"error": "login"})
@@ -208,6 +221,12 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path_only()
+        if p.startswith("/api/m/"):
+            return market.handle(self, "POST", p)
+        if p.startswith("/api/admin/m/"):
+            if not ADMIN_PASS or not self.authed():
+                return self.reply(401, {"error": "login"})
+            return market.admin(self, "POST", p)
         try:
             if p == "/api/contact":
                 return self.contact()
@@ -289,4 +308,5 @@ class H(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     SECRET = secret()
     os.makedirs(UPLOADS, exist_ok=True)
+    market.init(SECRET, DIR)
     ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
