@@ -23,7 +23,7 @@ DEFAULT_SETTINGS = {
     "base": {"software": 300, "website": 400, "device": 150, "design": 200, "writing": 100, "help": 80, "other": 150},
     "level_mult": {"basic": 1.0, "pro": 1.8, "secure": 2.8},
     "size_mult": {"small": 1.0, "medium": 2.2, "large": 4.5},
-    "reward": {"amount": 20.0},
+    "reward": {"amount": 30.0},
 }
 UNIT = "קרדיטים"
 STATUS_REQ = ("review", "open", "taken", "done", "closed")
@@ -58,7 +58,7 @@ def init(secret, directory):
         CREATE TABLE IF NOT EXISTS ratings(request_id INTEGER PRIMARY KEY, pro_id INTEGER NOT NULL, stars INTEGER NOT NULL,
           text TEXT, created INTEGER NOT NULL);
         """)
-        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
+        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE pros ADD COLUMN founding_until INTEGER", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
                      "ALTER TABLE requests ADD COLUMN tagged_pro INTEGER", "ALTER TABLE requests ADD COLUMN only_tagged INTEGER NOT NULL DEFAULT 0"):
             try:
                 c.execute(stmt)
@@ -164,17 +164,30 @@ def session_user(h):
     return None
 
 
+AMB = ((15, "שגריר זהב"), (5, "שגריר מוביל"), (1, "שגריר"))
+
+
+def amb_level(c, uid):
+    n = c.execute("SELECT COUNT(*) FROM credits WHERE user_id=? AND status IN ('pending','approved','paid')", (uid,)).fetchone()[0]
+    for need, label in AMB:
+        if n >= need:
+            return label
+    return ""
+
+
 def shown_rating(p):
     if p["rating_count"] >= 3:
         return round(p["rating_sum"] / p["rating_count"], 1)
     return p["admin_rating"]
 
 
-def pro_card(p, u):
+def pro_card(p, u, c=None):
     return {"id": u["id"], "name": u["name"], "kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"] or "",
             "photo": "/api/m/photo/%d" % u["id"] if p["photo"] == 2 else "", "photo_status": p["photo"],
             "links": [x for x in (p["links"] or "").split("\n") if x], "level": p["level"],
-            "rating": shown_rating(p), "ratings": p["rating_count"]}
+            "rating": shown_rating(p), "ratings": p["rating_count"],
+            "founding": bool(p["founding_until"] and p["founding_until"] > time.time()),
+            "ambassador": amb_level(c, u["id"]) if c is not None else ""}
 
 
 def user_out(c, u):
@@ -182,7 +195,7 @@ def user_out(c, u):
     if u["role"] == "pro":
         p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
         if p:
-            o["profile"] = pro_card(p, u)
+            o["profile"] = pro_card(p, u, c)
     return o
 
 
@@ -281,7 +294,7 @@ def route(h, method, path):
         with db() as c:
             rows = c.execute("SELECT p.*, u.name, u.id FROM pros p JOIN users u ON u.id=p.user_id "
                              "WHERE u.status='active' AND u.role='pro'").fetchall()
-            res = [pro_card(r, {"id": r["id"], "name": r["name"]}) for r in rows]
+            res = [pro_card(r, {"id": r["id"], "name": r["name"]}, c) for r in rows]
         res.sort(key=lambda x: (-(x["rating"] or 0), -LEVEL_RANK.get(x["level"], 1)))
         return h.reply(200, res)
     if method == "POST" and sub == "register":
@@ -317,7 +330,9 @@ def route(h, method, path):
             rows = c.execute("SELECT amount, status, created FROM credits WHERE user_id=? ORDER BY id DESC", (u["id"],)).fetchall()
             n = c.execute("SELECT COUNT(*) FROM users WHERE referred_by=?", (u["id"],)).fetchone()[0]
         tot = {k: sum(r["amount"] for r in rows if r["status"] == k) for k in ("pending", "approved", "paid")}
-        return h.reply(200, {"code": code, "referred": n, "unit": UNIT, "totals": tot,
+        with db() as c2:
+            level = amb_level(c2, u["id"])
+        return h.reply(200, {"code": code, "referred": n, "unit": UNIT, "totals": tot, "level": level,
                              "credits": [{"amount": r["amount"], "status": r["status"], "at": r["created"]} for r in rows],
                              "reward": settings()["reward"]["amount"]})
     if sub == "chats" or sub.startswith("chats/"):
@@ -386,7 +401,7 @@ def req_out(c, r, with_bids, viewer_id=None):
             if not u or not p or u["status"] != "active":
                 continue
             row = {"id": b["id"], "price": b["price"], "days": b["days"], "note": b["note"], "chosen": b["id"] == r["chosen_bid"],
-                   "pro": pro_card(p, u), "chat": chat_info(c, r["id"], b["pro_id"], viewer_id) if viewer_id else None}
+                   "pro": pro_card(p, u, c), "chat": chat_info(c, r["id"], b["pro_id"], viewer_id) if viewer_id else None}
             if b["id"] == r["chosen_bid"]:
                 row["pro"]["email"] = u["email"]
             bids.append(row)
@@ -622,6 +637,7 @@ def admin_route(h, method, sub):
                 if u["role"] == "pro":
                     p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
                     o.update({"kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"], "photo": p["photo"], "links": p["links"], "level": p["level"],
+                              "founding": bool(p["founding_until"] and p["founding_until"] > time.time()),
                               "admin_rating": p["admin_rating"], "rating_count": p["rating_count"],
                               "client_rating": round(p["rating_sum"] / p["rating_count"], 1) if p["rating_count"] else None})
                 users.append(o)
@@ -651,6 +667,8 @@ def admin_route(h, method, sub):
             if u["role"] == "pro":
                 if d.get("level") in LEVEL_RANK:
                     c.execute("UPDATE pros SET level=? WHERE user_id=?", (d["level"], uid))
+                if "founding" in d:
+                    c.execute("UPDATE pros SET founding_until=? WHERE user_id=?", (int(time.time()) + 365 * 86400 if d["founding"] is True else None, uid))
                 if "admin_rating" in d:
                     try:
                         v = None if d["admin_rating"] in ("", None) else max(1.0, min(5.0, float(d["admin_rating"])))

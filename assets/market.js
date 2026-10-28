@@ -32,7 +32,7 @@
   function msgBox() { return el("div", { cls: "mmsg", role: "status" }); }
   function stars(p) { return p.rating ? " · דירוג " + p.rating + (p.ratings ? " (" + p.ratings + ")" : "") : ""; }
   function proLine(p) {
-    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "") + stars(p);
+    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "") + stars(p) + (p.founding ? " · חבר מייסד" : "") + (p.ambassador ? " · " + p.ambassador : "");
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   // ---------- small private chat between a requester and a pro
@@ -66,6 +66,18 @@
   }
   var hashHandler = null;
   function go(path) { location.hash = "#/" + path; }
+  function waShare(text) { window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener"); }
+  function profileLink(id, code) {
+    return location.origin + location.pathname + (code ? "?ref=" + code : "") + "#/pro/" + id;
+  }
+  function shareProfileBtn(p, label) {
+    var b = el("button", { cls: "btn ghost sm", type: "button", text: label || "שיתוף בוואטסאפ" });
+    b.addEventListener("click", function () {
+      function send(code) { waShare(p.name + (p.field ? " · " + p.field : "") + "\n" + profileLink(p.id, code)); }
+      if (me) api("GET", "partner").then(function (r) { send(r.code); }); else send("");
+    });
+    return b;
+  }
   function dash(tabs) {
     var wrap = el("div", { cls: "mk-dash" }), bar = el("nav", { cls: "mk-dtabs" }), body = el("div");
     var btns = [];
@@ -134,7 +146,10 @@
       cp.addEventListener("click", function () { inp.select(); try { navigator.clipboard.writeText(link); } catch (e) {} cp.textContent = "הועתק"; });
       box.appendChild(el("h3", { text: "תוכנית שותפים" }));
       box.appendChild(el("p", { text: "מביאים מבקש חדש ללוח ומקבלים תגמול (" + p.reward + " " + p.unit + ") כשהעבודה הראשונה שלו מסתיימת. התגמול מאושר ידנית על ידי ההנהלה." }));
-      box.appendChild(el("div", { cls: "mk-bidform" }, [inp, cp]));
+      if (p.level) box.appendChild(el("p", { cls: "mk-ok", text: "הדרגה שלך: " + p.level }));
+      var wa = el("button", { cls: "btn primary sm", type: "button", text: "שיתוף בוואטסאפ" });
+      wa.addEventListener("click", function () { waShare("מקום לבקש עבודה, תוכנה או שירות ולקבל הצעות מאנשי מקצוע מאושרים:\n" + link); });
+      box.appendChild(el("div", { cls: "mk-bidform" }, [inp, cp, wa]));
       box.appendChild(el("p", { cls: "meta", text: "נרשמו דרכך: " + p.referred + " · ממתין: " + p.totals.pending + " · אושר: " + p.totals.approved + " · שולם: " + p.totals.paid + " (" + p.unit + ")" }));
       p.credits.forEach(function (c) { box.appendChild(el("div", { cls: "meta", text: c.amount + " " + p.unit + " · " + CSTAT[c.status] })); });
     });
@@ -349,6 +364,7 @@
     var rm = el("button", { cls: "btn ghost sm", type: "button", text: "הסרת תמונה" });
     rm.addEventListener("click", function () { api("POST", "photo/remove", {}).then(function () { pm.textContent = ps[0]; }); });
     return section("הפרופיל שלי", [el("div", { cls: "who" }, [avatar(p, true), el("p", { cls: "meta", text: proLine(p) })]),
+      el("div", { cls: "act" }, [shareProfileBtn(p, "שיתוף הפרופיל שלי בוואטסאפ")]),
       field("סוג", kind), field("תחום", fld), field("ניסיון", exp), field("על עצמך או על החברה", bio), field("קישורים", links),
       field("תמונה (אופציונלי, באישור הנהלה)", file), pm, el("div", { cls: "act" }, [b, rm]), m]);
   }
@@ -417,6 +433,7 @@
         p.field ? el("p", {}, [el("strong", { text: "תחום: " }), p.field]) : null, p.exp ? el("p", {}, [el("strong", { text: "ניסיון: " }), p.exp]) : null,
         p.bio ? el("p", { text: p.bio }) : null]);
       linksOf(p).forEach(function (a) { c.appendChild(a); });
+      c.appendChild(el("div", { cls: "act" }, [shareProfileBtn(p)]));
       s.appendChild(c);
     });
     return s;
