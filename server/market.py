@@ -959,7 +959,8 @@ def admin_route(h, method, sub):
         if method == "GET" and sub == "overview":
             users = []
             for u in c.execute("SELECT * FROM users ORDER BY id DESC").fetchall():
-                o = {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "status": u["status"]}
+                o = {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "status": u["status"],
+                     "username": u["username"], "mt": mt_out(u)}
                 if u["role"] == "pro":
                     p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
                     o.update({"kind": p["kind"], "field": p["field"], "bio": p["bio"], "exp": p["exp"], "photo": p["photo"], "cover": p["cover"], "links": p["links"], "level": p["level"],
@@ -1029,6 +1030,13 @@ def admin_route(h, method, sub):
             if d.get("status") not in ("pending", "approved", "paid", "rejected"):
                 return h.reply(400, {"error": "bad"})
             c.execute("UPDATE credits SET status=? WHERE id=?", (d["status"], int(d.get("id") or 0)))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "mt":
+            uid = int(d.get("id") or 0)
+            if d.get("ok") is True:
+                c.execute("UPDATE users SET mt_verified=1 WHERE id=? AND mt_user IS NOT NULL", (uid,))
+            else:
+                c.execute("UPDATE users SET mt_user=NULL, mt_code=NULL, mt_verified=0, mt_rep=NULL, mt_posts=NULL WHERE id=?", (uid,))
             return h.reply(200, {"ok": True})
         if method == "POST" and sub in ("photo", "cover"):
             uid = int(d.get("id") or 0)

@@ -76,7 +76,8 @@
       var head = el("div", { cls: "uhead" }, [el("strong", { text: u.name }),
         el("span", { cls: "chip " + stCls, text: UST[u.status] }), el("span", { cls: "chip", text: ROLE[u.role] }),
         u.role === "pro" ? el("span", { cls: "chip cat", text: (LEVELMAP[u.level] || "").split(" (")[0] }) : null]);
-      var lines = [head, el("div", { cls: "meta", text: u.email })];
+      var lines = [head, el("div", { cls: "meta", text: u.email + (u.username ? " · @" + u.username : "") })];
+      if (u.mt) lines.push(el("a", { cls: "mtbadge" + (u.mt.verified ? " ok" : ""), href: u.mt.url, target: "_blank", rel: "noopener noreferrer", text: "מתמחים טופ: " + u.mt.user + (u.mt.verified ? " · מאומת" : " · לא מאומת") }));
       var lvl, rating;
       if (u.role === "client") {
         lines.push(el("div", { cls: "meta", text: "מבקשים נכנסים מיד ולא צריכים אישור. כל בקשה שהם מפרסמים ממתינה לאישורך בלשונית \"בקשות\"." }));
@@ -106,6 +107,8 @@
       if (u.role === "pro" && u.cover === 1) acts.appendChild(btn("אישור רקע", function () { call("POST", "cover", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
       if (u.role === "pro" && u.cover) acts.appendChild(btn("הסרת רקע", function () { call("POST", "cover", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
       if (u.role === "pro" && u.photo) acts.appendChild(btn("הסרת תמונה", function () { call("POST", "photo", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
+      if (u.mt && !u.mt.verified) acts.appendChild(btn("אישור ידני של מתמחים", function () { call("POST", "mt", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
+      if (u.mt) acts.appendChild(btn("הסרת קישור מתמחים", function () { call("POST", "mt", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
       if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { ktAsk("לחסום את " + u.name + "?", { danger: true }).then(function (ok) { if (ok) set({ status: "blocked" }); }); }, true));
       var kids = lines.slice();
       if (u.role === "pro") {
