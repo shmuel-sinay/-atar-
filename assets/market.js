@@ -8,8 +8,10 @@
   } catch (e) {}
   function savedRef() { try { return localStorage.getItem("mk_ref") || ""; } catch (e) { return ""; } }
   var STATUS = { review: "ממתינה לאישור הנהלה", open: "מחפש בעל מקצוע", taken: "נמצא בעל מקצוע", done: "בוצעה", closed: "סגורה" };
-  var CAT_DESC = { software: "כלים, סקריפטים ותוכנות בהתאמה אישית", website: "אתרים ודפי נחיתה", device: "התאמת מכשירים ומחשבים",
-    design: "עיצוב גרפי ומיתוג", writing: "כתיבה, עריכה, הגהה ותרגום", help: "הדרכה, ייעוץ ועזרה טכנית", other: "כל נושא אחר" };
+  var CAT_DESC = { software: "תוכנות וכלים למחשב בהתאמה אישית", office: "קבצי אקסל, נוסחאות, וורד ואוטומציה של עבודה משרדית",
+    device: "התקנות, ניקוי, סינון והתאמת מחשבים", android_app: "פיתוח אפליקציות אנדרואיד והתאמת אפליקציות קיימות",
+    android_dev: "עריכת מכשירי אנדרואיד: הסרת אפליקציות, הגדרות, סינון והתאמה אישית", website: "אתרים ודפי נחיתה",
+    design: "עיצוב גרפי, לוגו ומיתוג", writing: "כתיבה, עריכה, הגהה ותרגום", help: "הדרכה, ייעוץ ועזרה טכנית", other: "כל נושא אחר" };
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -379,6 +381,16 @@
     return el("div", { cls: "scard cta" }, [el("h3", { text: "שלום " + first(me.name) }),
       el("p", { text: "בחר בקשה פתוחה, הגש הצעה או פתח שיחה עם המזמין." }), linkBtn("העבודות שלי", "#/mine", true)]);
   }
+  function catGroups() { return meta.groups && meta.groups.length ? meta.groups : [["", Object.keys(meta.cats)]]; }
+  function catSelect(value) {
+    var s = el("select");
+    catGroups().forEach(function (g) {
+      var og = el("optgroup", { label: g[0] });
+      g[1].forEach(function (k) { var o = el("option", { value: k, text: meta.cats[k] }); if (k === value) o.selected = true; og.appendChild(o); });
+      s.appendChild(og);
+    });
+    return s;
+  }
   function first(n) { return String(n || "").split(" ")[0]; }
 
   // ---- home: all requests, like topics in a forum
@@ -414,9 +426,12 @@
       var total = 0;
       Object.keys(meta.cats).forEach(function (k) { total += ((st.cats || {})[k] || {}).requests || 0; });
       nav.appendChild(el("a", { cls: cat ? "" : "on", href: "#/" }, [el("span", { text: "כל התחומים" }), el("span", { cls: "n", text: String(total) })]));
-      Object.keys(meta.cats).forEach(function (k) {
-        var n = ((st.cats || {})[k] || {}).requests || 0;
-        nav.appendChild(el("a", { cls: cat === k ? "on" : "", href: "#/c/" + k }, [el("span", { text: meta.cats[k] }), el("span", { cls: "n", text: n ? String(n) : "" })]));
+      catGroups().forEach(function (g) {
+        nav.appendChild(el("span", { cls: "cgroup", text: g[0] }));
+        g[1].forEach(function (k) {
+          var n = ((st.cats || {})[k] || {}).requests || 0;
+          nav.appendChild(el("a", { cls: cat === k ? "on" : "", href: "#/c/" + k }, [el("span", { text: meta.cats[k] }), el("span", { cls: "n", text: n ? String(n) : "" })]));
+        });
       });
       stats.appendChild(el("div", { cls: "stat" }, [el("b", { text: String(st.pros || 0) }), el("span", { text: "אנשי מקצוע" })]));
       stats.appendChild(el("div", { cls: "stat" }, [el("b", { text: String(st.done || 0) }), el("span", { text: "עבודות שבוצעו" })]));
@@ -564,7 +579,7 @@
   function newRequestPage(preCat) {
     if (!me || me.role !== "client") return root.appendChild(note("פרסום בקשה זמין למבקשים רשומים."));
     root.appendChild(crumbs([{ text: "בקשות", href: "#/" }, { text: "בקשה חדשה" }]));
-    var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 6, maxLength: 3000 }), cat = select(meta.cats, meta.cats[preCat] ? preCat : "software"),
+    var title = el("input", { maxLength: 120 }), desc = el("textarea", { rows: 6, maxLength: 3000 }), cat = catSelect(meta.cats[preCat] ? preCat : "software"),
       lvl = select(meta.levels, "any", "לא משנה"), size = select(meta.sizes, "small"), budget = el("input", { placeholder: "אופציונלי" }),
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
     var m = msgBox(), tag = el("select"), only = el("input", { type: "checkbox" });
