@@ -34,7 +34,7 @@
   function msgBox() { return el("div", { cls: "mmsg", role: "status" }); }
   function stars(p) { return p.rating ? " · דירוג " + p.rating + (p.ratings ? " (" + p.ratings + ")" : "") : ""; }
   function proLine(p) {
-    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "") + stars(p) + (p.founding ? " · חבר מייסד" : "") + (p.ambassador ? " · " + p.ambassador : "");
+    return (p.kind === "company" ? "חברה" : "איש מקצוע") + " · " + (meta.levels[p.level] || "").split(":")[0] + stars(p) + (p.founding ? " · חבר מייסד" : "") + (p.ambassador ? " · " + p.ambassador : "");
   }
   function section(title, kids) { return el("section", { cls: "card mk-sec" }, [el("h3", { text: title })].concat(kids)); }
   var drawer = null, pulling = null;
@@ -503,7 +503,7 @@
       contact = el("input", { placeholder: "טלפון או אימייל, יוצג רק למי שתבחר" });
     var m = msgBox(), tag = el("select"), only = el("input", { type: "checkbox" });
     tag.appendChild(el("option", { value: "", text: "ללא (פתוחה לכל אנשי המקצוע)" }));
-    api("GET", "pros").then(function (rows) { (Array.isArray(rows) ? rows : []).forEach(function (p) { tag.appendChild(el("option", { value: p.id, text: p.name + " · " + (meta.levels[p.level] || "") })); }); });
+    api("GET", "pros").then(function (rows) { (Array.isArray(rows) ? rows : []).forEach(function (p) { tag.appendChild(el("option", { value: p.id, text: p.name + " · " + (meta.levels[p.level] || "").split(":")[0] })); }); });
     var est = estimateBox(function () { return { category: cat.value, level: lvl.value === "any" ? "basic" : lvl.value, size: size.value }; });
     [cat, lvl, size].forEach(function (s) { s.addEventListener("change", est.update); });
     est.update();
@@ -517,7 +517,7 @@
         });
     });
     root.appendChild(el("div", { cls: "formcard" }, [el("h1", { text: "בקשה חדשה" }), el("p", { cls: "sub", text: "תאר מה צריך. הבקשה תופיע בלוח לאחר אישור ההנהלה, ופרטי הקשר שלך יימסרו רק למי שתבחר." }),
-      field("כותרת", title), field("מה צריך", desc), el("div", { cls: "two" }, [field("תחום", cat), field("רמה רצויה", lvl)]),
+      field("כותרת", title), field("מה צריך", desc), el("div", { cls: "two" }, [field("תחום", cat), field("רמה רצויה (משפיעה על המחיר)", lvl)]),
       el("div", { cls: "two" }, [field("גודל העבודה", size), field("תקציב", budget)]), field("איך ליצור קשר", contact), field("תיוג מפתח מסוים", tag),
       el("label", { cls: "mk-agree" }, [only, el("span", { text: "גלוי רק למפתח המתויג" })]), est.node, b, m]));
   }
