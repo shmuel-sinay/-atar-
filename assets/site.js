@@ -38,11 +38,11 @@
       { k: "who", q: "למי הנגן?", opts: [["me", "בשבילי"], ["child", "בשביל ילד או נער"], ["gift", "מתנה למישהו אחר"]] },
       { k: "use", q: "בשביל מה הנגן?", hint: "אפשר לבחור כמה תשובות.", multi: true, opts: [
         ["shiurim", "לשמוע שיעורים"], ["music", "לשמוע שירים וניגונים"], ["learn", "לחזור על לימוד"],
-        ["record", "להקליט"], ["games", "משחקים"], ["apps", "תוכנה מסוימת שאני צריך"], ["light", "גם כפנס או למצלמה"]] },
+        ["record", "להקליט"], ["games", "משחקים"], ["apps", "תוכנה מסוימת שאני צריך"]] },
       { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["own", "רק סרטונים שאצלם בעצמי במכשיר"], ["yes", "כן, גם סרטונים מבחוץ"]] },
       { k: "add", q: "תרצה להוסיף לו תוכנות בעתיד?", hint: "\"תוכנה\" כאן היא כל דבר שמוסיפים לנגן: למשל ספר שיעורים, לוח זמנים, או משהו לעבודה.", opts: [
         ["none", "לא, מספיק לי מה שיש בו"], ["safe", "כן, אבל רק מרשימה בטוחה שבדקתם"], ["any", "כן, גם דברים שאביא בעצמי"]] },
-      { k: "cam", q: "צריך מצלמה או פנס?", opts: [["no", "לא צריך"], ["light", "רק פנס"], ["cam", "כן, מצלמה"]] }
+      { k: "cam", q: "צריך פנס או מצלמה?", hint: "אפשר לבחור גם את שניהם.", multi: true, none: "no", opts: [["light", "פנס"], ["cam", "מצלמה"], ["no", "לא צריך אף אחד"]] }
     ];
     var TIER = { none: "שמור", safe: "שמור עם חנות פנימית", any: "עם התקנה מבחוץ" };
     function draw() {
@@ -62,7 +62,9 @@
         b.addEventListener("click", function () {
           if (!cur.multi) { ans[cur.k] = o[0]; step++; return draw(); }
           var i = picked.indexOf(o[0]); if (i >= 0) picked.splice(i, 1); else picked.push(o[0]);
-          b.className = "qopt" + (picked.indexOf(o[0]) >= 0 ? " on" : ""); ans[cur.k] = picked; next.disabled = !picked.length;
+          if (cur.none && i < 0) picked = o[0] === cur.none ? [cur.none] : picked.filter(function (x) { return x !== cur.none; });
+          Array.prototype.forEach.call(opts.children, function (x, j) { x.className = "qopt" + (picked.indexOf(cur.opts[j][0]) >= 0 ? " on" : ""); });
+          ans[cur.k] = picked; next.disabled = !picked.length;
         });
         opts.appendChild(b);
       });
@@ -74,7 +76,8 @@
     }
     function result() {
       var use = ans.use || [];
-      var plus = ans.cam === "cam" || ans.cam === "light" || ans.video === "own" || use.indexOf("light") >= 0;
+      var cam = ans.cam || [];
+      var plus = cam.indexOf("cam") >= 0 || cam.indexOf("light") >= 0 || ans.video === "own";
       var player = plus ? "הזמיר פלוס" : "הזמיר", tier = TIER[ans.add] || "שמור";
       var wantsApps = use.indexOf("apps") >= 0 || use.indexOf("games") >= 0;
       if (wantsApps && tier === "שמור") tier = "שמור עם חנות פנימית";
@@ -84,7 +87,7 @@
       r.appendChild(el("span", "qlabel", "ההמלצה שלנו"));
       r.appendChild(el("h3", null, player + " · " + tier));
       var why = el("ul");
-      why.appendChild(el("li", null, plus ? "בזמיר פלוס יש פי שניים מקום, פנס ומצלמה (ואפשר גם בלי מצלמה)." : "הזמיר קטן, פשוט ונוח, ומתאים בדיוק לשמיעה וללימוד."));
+      why.appendChild(el("li", null, plus ? "בזמיר פלוס יש פי שניים מקום, " + (cam.indexOf("cam") >= 0 && cam.indexOf("light") >= 0 ? "גם פנס וגם מצלמה." : cam.indexOf("cam") >= 0 ? "ומצלמה." : "ופנס. את המצלמה אפשר לסגור.") : "הזמיר קטן, פשוט ונוח, ומתאים בדיוק לשמיעה וללימוד."));
       why.appendChild(el("li", null, tier === "שמור" ? "ברמה השמורה יש רק מה שצריך: נגן, רדיו, הקלטה ושיעורים. אי אפשר להוסיף שום דבר, ולכן אין מה לעקוף." :
         tier === "שמור עם חנות פנימית" ? "אפשר להוסיף תוכנות, אבל רק מתוך רשימה שאנחנו בדקנו ואישרנו." : "אפשר להוסיף גם דברים מבחוץ, ועדיין אין בו אינטרנט ואין בו סרטים."));
       if (kid && ans.add === "any") why.appendChild(el("li", null, "לילד או לנער אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
@@ -96,7 +99,7 @@
       r.appendChild(why);
       var acts = el("div", "qnav");
       var go = el("a", "btn primary", "להזמנה עם ההתאמה הזאת");
-      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (kid ? " · לילד או נער" : "") + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
+      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier + (kid ? " · לילד או נער" : "") + (plus && cam.indexOf("cam") < 0 ? " · בלי מצלמה" : "") + (ans.video === "own" ? " · סרטונים שצולמו במכשיר בלבד" : ""));
       var again = el("button", "btn ghost", "להתחיל מחדש"); again.type = "button";
       again.addEventListener("click", function () { ans = {}; step = 0; draw(); });
       acts.appendChild(go); acts.appendChild(again); r.appendChild(acts);
