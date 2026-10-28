@@ -425,14 +425,16 @@ write("/players/", pl)
 # ---------- FORUM (separate look, not part of the business site) ----------
 FORUM = "מלאכת מחשבת"
 
-def fhead(title, path):
+def fhead(title, path, desc=None):
+    idx = desc is not None
+    meta = (f'<meta name="description" content="{html.escape(desc)}">\n<link rel="canonical" href="{SITE}{path}">\n<meta property="og:site_name" content="{FORUM}">\n<meta property="og:title" content="{html.escape(title)}">\n<meta property="og:description" content="{html.escape(desc)}">\n<script type="application/ld+json">{{"@context":"https://schema.org","@type":"WebSite","name":"{FORUM}","alternateName":"פורום מלאכת מחשבת","url":"{SITE}/market/"}}</script>') if idx else '<meta name="robots" content="noindex">'
     return f'''<!doctype html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
-<meta name="robots" content="noindex">
+{meta}
 <meta name="theme-color" content="#14243f">
 <link rel="icon" href="{V("assets/forum-icon.svg")}" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -473,7 +475,7 @@ r += foot()
 write("/request/", r)
 
 # ---------- MARKET ----------
-mk = fhead(FORUM, "/market/")
+mk = fhead(FORUM + " | פורום ולוח עבודות טכנולוגיה לציבור החרדי", "/market/", "מלאכת מחשבת: פורום ולוח עבודות טכנולוגיה. מפרסמים בקשה לעבודה במחשבים, נגנים, אפליקציות ותוכנות, ואנשי מקצוע מאושרים מגישים הצעות.")
 mk += '''<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
 <script src="%s" defer></script>
 ''' % V("assets/market.js")
@@ -592,7 +594,7 @@ RULES = [
   "מנהל הלוח רשאי לעדכן את הכללים. הנוסח העדכני מפורסם בדף זה, והמשך שימוש בלוח מהווה הסכמה לו.",
  ]),
 ]
-ru = fhead("כללי הלוח | " + FORUM, "/market/rules/")
+ru = fhead("כללי הלוח | " + FORUM, "/market/rules/", "כללי הפורום והלוח של מלאכת מחשבת: איך מפרסמים בקשה, איך מגישים הצעה, ומה מותר ואסור.")
 ru += '<div class="ptitle"><h1>כללי הלוח</h1></div><p class="sub">הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p><div class="fstack">'
 for t, items in RULES:
     ru += '<article class="card"><h3>%s</h3><ul>%s</ul></article>' % (html.escape(t), "".join("<li>%s</li>" % html.escape(x) for x in items))
