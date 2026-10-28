@@ -33,18 +33,18 @@ DEFAULT = {
                  "apps": "במחיר רצפה", "players": "במחיר רצפה", "translate": "במחיר רצפה", "design": "במחיר רצפה", "scripts": "במחיר רצפה"},
     "products": [
         {"id": "m393", "name": "הזמיר",
-         "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מוכשר ומוכן לשמיעה וללימוד.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nBluetooth 5.0 ורדיו FM, מגיע בלי אינטרנט\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
+         "desc": "נגן אנדרואיד 13 קומפקטי, מגיע מוכשר ומוכן לשמיעה וללימוד.\nמסך 3.99 אינץ' חד (400×960)\nמעבד 8 ליבות, 3GB זיכרון ו-16GB אחסון\nכרטיס זיכרון עד 1TB\nBluetooth 5.0 ורדיו FM\nמגיע בלי אינטרנט ובלי סרטים\nשמע איכותי (DAC) וחיישן תנועה\nסוללה 1250mAh\nבקופסה: אוזניות, כבל USB-C וכיסוי מגן",
          "price": "", "status": "out", "image": "/assets/products/zamir-set.jpg",
          "gallery": ["/assets/products/zamir-set.jpg", "/assets/products/zamir-front.jpg"], "tiers": True, "visible": True},
         {"id": "m36plus", "name": "הזמיר פלוס",
-         "desc": "הדגם המשודרג בסדרת הזמיר: אחסון כפול ופנס, מגיע מוכשר ומוכן לשמיעה וללימוד.\n32GB אחסון\nכרטיס זיכרון\nמצלמה ופנס (אפשר גם בלי מצלמה)\nכפתור ייעודי בצד המכשיר",
+         "desc": "הדגם המשודרג בסדרת הזמיר: אחסון כפול, מצלמה ופנס, מגיע מוכשר ומוכן לשמיעה וללימוד.\nמסך מגע 4 אינץ'\n32GB אחסון, וכרטיס זיכרון להרחבה\nרמקול מובנה ושקע לאוזניות\nרדיו FM, הקלטה ו-Bluetooth\nקורא ספרים, שעון מעורר ומד צעדים\nמצלמה ופנס (אפשר גם בלי מצלמה)\nסוללה ליותר מ-20 שעות שמיעה\nכל סוגי קבצי השמע: MP3, WAV, FLAC, AAC, WMA, OGG, APE\nגוף מתכת, 11×6×1 ס\"מ\nמגיע בלי אינטרנט ובלי סרטים",
          "price": "", "status": "order", "image": "/assets/products/zamir-plus-front.jpg",
          "gallery": ["/assets/products/zamir-plus-front.jpg", "/assets/products/zamir-plus-back.jpg"], "tiers": True, "visible": True},
         {"id": "other", "name": "דגמים נוספים", "desc": "יש דגמים נוספים בהזמנה מיוחדת. אפשר לברר זמינות ומחיר.",
          "price": "לפי דגם", "status": "order", "image": "", "visible": True},
     ],
 }
-CATALOG = 5  # bump to roll new default products into an existing data file
+CATALOG = 6  # bump to roll new default products into an existing data file
 
 def secret():
     os.makedirs(DIR, exist_ok=True)

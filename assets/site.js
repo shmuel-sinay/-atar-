@@ -30,6 +30,75 @@
     function key(e) { if (e.key === "Escape") close(); }
     w.addEventListener("click", close); document.addEventListener("keydown", key);
   }
+  // "עזרה בהתאמת נגן": plain questions, no technical words, ends with a player and a level
+  var qbox = document.getElementById("quiz");
+  if (qbox) {
+    var ans = {}, step = 0;
+    var Q = [
+      { k: "use", q: "בשביל מה הנגן?", hint: "אפשר לבחור כמה תשובות.", multi: true, opts: [
+        ["shiurim", "לשמוע שיעורים"], ["music", "לשמוע שירים וניגונים"], ["learn", "לחזור על לימוד"],
+        ["child", "בשביל ילד"], ["record", "להקליט"], ["light", "גם כפנס או למצלמה"]] },
+      { k: "video", q: "תרצה לראות בו סרטונים?", opts: [["no", "לא, רק לשמוע"], ["yes", "כן, גם לראות"]] },
+      { k: "add", q: "תרצה להוסיף לו תוכנות בעתיד?", hint: "\"תוכנה\" כאן היא כל דבר שמוסיפים לנגן: למשל ספר שיעורים, לוח זמנים, או משהו לעבודה.", opts: [
+        ["none", "לא, מספיק לי מה שיש בו"], ["safe", "כן, אבל רק מרשימה בטוחה שבדקתם"], ["any", "כן, גם דברים שאביא בעצמי"]] },
+      { k: "cam", q: "צריך מצלמה או פנס?", opts: [["no", "לא צריך"], ["light", "רק פנס"], ["cam", "כן, מצלמה"]] },
+      { k: "space", q: "כמה שיעורים ושירים תרצה לשמור בו?", opts: [["some", "כמה מאות, בסדר גמור"], ["lots", "הרבה מאוד"]] }
+    ];
+    var TIER = { none: "שמור", safe: "שמור עם חנות פנימית", any: "עם התקנה מבחוץ" };
+    function draw() {
+      qbox.textContent = "";
+      var head = el("div", "qhead");
+      head.appendChild(el("h2", null, "עזרה בהתאמת נגן"));
+      head.appendChild(el("p", null, "כמה שאלות פשוטות, ונמליץ על הנגן והרמה שמתאימים לך. לא צריך להבין בטכנולוגיה."));
+      qbox.appendChild(head);
+      if (step >= Q.length) return result();
+      var cur = Q[step];
+      var bar = el("div", "qbar"); var fill = el("span"); fill.style.width = Math.round(step / Q.length * 100) + "%"; bar.appendChild(fill); qbox.appendChild(bar);
+      qbox.appendChild(el("h3", "qq", cur.q));
+      if (cur.hint) qbox.appendChild(el("p", "qhint", cur.hint));
+      var opts = el("div", "qopts"), picked = (ans[cur.k] || []).slice ? (ans[cur.k] || []).slice() : [];
+      cur.opts.forEach(function (o) {
+        var b = el("button", "qopt" + (cur.multi && picked.indexOf(o[0]) >= 0 ? " on" : ""), o[1]); b.type = "button";
+        b.addEventListener("click", function () {
+          if (!cur.multi) { ans[cur.k] = o[0]; step++; return draw(); }
+          var i = picked.indexOf(o[0]); if (i >= 0) picked.splice(i, 1); else picked.push(o[0]);
+          b.className = "qopt" + (picked.indexOf(o[0]) >= 0 ? " on" : ""); ans[cur.k] = picked; next.disabled = !picked.length;
+        });
+        opts.appendChild(b);
+      });
+      qbox.appendChild(opts);
+      var nav = el("div", "qnav");
+      if (step) { var back = el("button", "btn ghost", "חזרה"); back.type = "button"; back.addEventListener("click", function () { step--; draw(); }); nav.appendChild(back); }
+      if (cur.multi) { var next = el("button", "btn primary", "המשך"); next.type = "button"; next.disabled = !picked.length; next.addEventListener("click", function () { step++; draw(); }); nav.appendChild(next); }
+      qbox.appendChild(nav);
+    }
+    function result() {
+      var use = ans.use || [];
+      var plus = ans.cam === "cam" || ans.cam === "light" || ans.space === "lots" || use.indexOf("light") >= 0;
+      var player = plus ? "הזמיר פלוס" : "הזמיר", tier = TIER[ans.add] || "שמור";
+      if (use.indexOf("child") >= 0 && ans.add === "any") tier = "שמור עם חנות פנימית";
+      var r = el("div", "qres");
+      r.appendChild(el("span", "qlabel", "ההמלצה שלנו"));
+      r.appendChild(el("h3", null, player + " · " + tier));
+      var why = el("ul");
+      why.appendChild(el("li", null, plus ? "בזמיר פלוס יש פי שניים מקום, פנס ומצלמה (ואפשר גם בלי מצלמה)." : "הזמיר קטן, פשוט ונוח, ומתאים בדיוק לשמיעה וללימוד."));
+      why.appendChild(el("li", null, tier === "שמור" ? "ברמה השמורה יש רק מה שצריך: נגן, רדיו, הקלטה ושיעורים. אי אפשר להוסיף שום דבר, ולכן אין מה לעקוף." :
+        tier === "שמור עם חנות פנימית" ? "אפשר להוסיף תוכנות, אבל רק מתוך רשימה שאנחנו בדקנו ואישרנו." : "אפשר להוסיף גם דברים מבחוץ, ועדיין אין בו אינטרנט ואין בו סרטים."));
+      if (use.indexOf("child") >= 0 && ans.add === "any") why.appendChild(el("li", null, "לילד אנחנו ממליצים על רשימה בטוחה בלבד, ולא על הוספה מבחוץ."));
+      if (ans.video === "yes") why.appendChild(el("li", "qwarn", "סרטונים לא יהיו: אין אצלנו נגנים עם סרטים, וזה בכוונה. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו."));
+      why.appendChild(el("li", null, "בכל מקרה: בלי אינטרנט ובלי סרטים, ואפשר לשנות רמה גם אחר כך."));
+      r.appendChild(why);
+      var acts = el("div", "qnav");
+      var go = el("a", "btn primary", "להזמנה עם ההתאמה הזאת");
+      go.href = "/contact/?product=" + encodeURIComponent(player + " · " + tier);
+      var again = el("button", "btn ghost", "להתחיל מחדש"); again.type = "button";
+      again.addEventListener("click", function () { ans = {}; step = 0; draw(); });
+      acts.appendChild(go); acts.appendChild(again); r.appendChild(acts);
+      qbox.appendChild(r);
+    }
+    draw();
+  }
+
   var box = document.getElementById("products");
   if (box) {
     get("/api/products").then(function (list) {

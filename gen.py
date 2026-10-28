@@ -225,6 +225,7 @@ sh = head("חנות נגנים | כושר טק: נגני אנדרואיד מוכ
 sh += '''<section class="pagehead"><div class="wrap"><h1>הקו השמור</h1><p>נגני אנדרואיד שנבחרו בקפידה ומגיעים מוכשרים ומוכנים לשימוש. אנחנו לא מוכרים מה שאנחנו לא עומדים מאחוריו.</p></div></section>
 <section class="block"><div class="wrap">
 <div class="guard"><strong>בכל הנגנים שלנו:</strong> בלי אינטרנט ובלי שום אפשרות לצפות בסרטים. זה לא תוסף, זה הבסיס.</div>
+<div id="quiz" class="quiz"></div>
 <h2 class="title">שלוש רמות הכשרה</h2>
 <p class="sub">כל נגן בחנות אפשר להזמין בכל אחת מהרמות. בוחרים לפי הצורך, מהשמורה ביותר.</p>
 <div class="grid c3 tiers">
