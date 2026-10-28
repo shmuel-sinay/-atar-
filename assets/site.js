@@ -40,10 +40,10 @@
     { k: "voice", t: "הקראה וכתיבה בקול", d: "הנגן מקריא טקסט בעברית, ומקליד את מה שאומרים לו." },
     { k: "translate", t: "תרגום", d: "תרגום מילים ומשפטים, גם בלי אינטרנט." },
     { k: "music", t: "כלי נגינה", d: "אורגן, תופים, מכוון לגיטרה ולימוד תווים." },
-    { k: "games", t: "משחקים", d: "משחקים שקטים ומתאימים, מתוך רשימה שבדקנו." }
+    { k: "games", t: "משחקים", d: "בדרך כלל אין. אם חשוב לך, אפשר לבקש משחקים שקטים ומתאימים מתוך רשימה שבדקנו.", quizOnly: true }
   ];
   var catbox = document.getElementById("catalog");
-  if (catbox) CATALOG.forEach(function (c) {
+  if (catbox) CATALOG.filter(function (c) { return !c.quizOnly; }).forEach(function (c) {
     var a = el("article", "catitem"); a.appendChild(el("h3", null, c.t)); a.appendChild(el("p", null, c.d));
     if (c.base) a.appendChild(el("span", "cbase", "יש כבר ברמה השמורה"));
     catbox.appendChild(a);
@@ -125,7 +125,7 @@
         tier === "שמור עם חנות פנימית" ? "חנות פנימית: אפשר להוסיף בהמשך, אבל רק ממה שבדקנו ואישרנו." : "התקנה מבחוץ: אפשר להוסיף גם דברים שתביא בעצמך."));
       if (note) why.appendChild(el("li", null, note));
       if (ans.video === "own") why.appendChild(el("li", null, "סרטונים שצילמת במכשיר: נבדוק את זה איתך כשנדבר."));
-      why.appendChild(el("li", null, "בכל נגן: בלי אינטרנט ובלי אפשרות להכניס סרטים. ואם תתחרט, אפשר לשנות אחר כך."));
+      why.appendChild(el("li", null, "בכל נגן: בלי אינטרנט ובלי סרטים" + (want.indexOf("games") >= 0 ? ". משחקים ייכנסו רק כי ביקשת, ורק מהרשימה שלנו." : " ובלי משחקים.") + " ואם תתחרט, אפשר לשנות אחר כך."));
       r.appendChild(why);
       var details = ["נגן: " + player, "רמה: " + tier, "למי: " + ({ me: "בשבילי", child: "ילד או נער", gift: "מתנה" }[ans.who] || ""),
         "מה שיהיה בנגן: " + CATALOG.filter(function (c) { return c.base || want.indexOf(c.k) >= 0; }).map(function (c) { return c.t; }).join(", "),
