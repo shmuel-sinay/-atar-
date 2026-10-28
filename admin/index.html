@@ -44,6 +44,7 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
   <div class="bar"><div class="wrap"><h1>ניהול האתר</h1>
     <span><a href="/" style="margin-inline-end:14px">לאתר</a><button class="sm" id="out" type="button">יציאה</button></span></div></div>
   <div class="wrap">
+    <section id="boardbox" class="box" hidden></section>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="products" aria-selected="true">מוצרים</button>
       <button role="tab" data-tab="services" aria-selected="false">שירותים ומחירים</button>
@@ -176,7 +177,7 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
         el("span", { cls: "meta", text: "  ·  " + (m.time || "") })]);
       var who = el("div", { cls: "meta", text: (m.name || "") + "  ·  " + (m.contact || "") });
       box.appendChild(el("div", { cls: "box" }, [head, who, el("p", { cls: "msg", text: m.message || "" }),
-        el("div", { cls: "act" }, [btn("מחיקה", function () {
+        el("div", { cls: "act" }, [btn("העבר ללוח", function () { if (window.forwardToBoard) window.forwardToBoard(m); }), btn("מחיקה", function () {
           if (!confirm("למחוק את ההודעה?")) return;
           api("POST", "/api/admin/messages/delete", { ids: [m.id] }).then(loadMessages);
         }, true)])]));
@@ -224,5 +225,7 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
   fetch("/api/admin/me", { credentials: "same-origin" }).then(function (r) { r.ok ? showApp() : showLogin(); }).catch(showLogin);
 })();
 </script>
+<script src="/admin/nav.js?v=5bf12c1c"></script>
+<script src="/admin/board.js?v=875261c7"></script>
 </body>
 </html>

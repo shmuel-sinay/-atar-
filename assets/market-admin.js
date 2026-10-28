@@ -98,9 +98,18 @@
       function setS(s) { call("POST", "request", { id: r.id, status: s }).then(function () { note("נשמר"); load(); }); }
       if (r.status === "review") acts.appendChild(btn("אישור ופרסום", function () { setS("open"); }));
       if (r.status !== "closed") acts.appendChild(btn("סגירה", function () { if (confirm("לסגור?")) setS("closed"); }, true));
+      var bidsBox = null;
+      if (r.via_admin && r.bids && r.bids.length) {
+        bidsBox = el("div", {}, [el("div", { cls: "meta", text: "הצעות (פרטי הקשר למסירה ללקוח):" })]);
+        r.bids.forEach(function (b) {
+          var row = el("div", { cls: "msg", text: b.pro.name + " · " + b.pro.email + " · מחיר: " + b.price + (b.days ? " · זמן: " + b.days : "") + (b.note ? " · " + b.note : "") + (b.chosen ? " · נבחר" : "") });
+          if (r.status === "open") row.appendChild(btn(" בחירה בהצעה", function () { if (confirm("לבחור בהצעה הזאת?")) call("POST", "choose", { request_id: r.id, bid_id: b.id }).then(function () { note("נשמר"); load(); }); }));
+          bidsBox.appendChild(row);
+        });
+      }
       rl.appendChild(el("div", { cls: "box" }, [el("strong", { text: r.title }),
-        el("div", { cls: "meta", text: STAT[r.status] + " · " + (CATMAP[r.category] || "") + " · הצעות: " + r.bids_count + " · לקוח: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }),
-        el("p", { cls: "msg", text: r.desc }), acts]));
+        el("div", { cls: "meta", text: (r.via_admin ? "מטעם כושר טק · " : "") + STAT[r.status] + " · " + (CATMAP[r.category] || "") + " · הצעות: " + r.bids_count + " · לקוח: " + r.client.name + " · " + r.client.email + (r.client.contact ? " · " + r.client.contact : "") }),
+        el("p", { cls: "msg", text: r.desc }), bidsBox, acts]));
     });
     if (!data.requests.length) rl.appendChild(el("p", { cls: "meta", text: "אין בקשות." }));
 

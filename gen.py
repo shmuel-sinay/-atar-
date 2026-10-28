@@ -233,8 +233,9 @@ ma += '''<div id="login" class="box" hidden style="max-width:360px;margin:8vh au
 <section class="panel" id="p-partners"><div id="clist"></div></section>
 <section class="panel" id="p-est"><div id="elist"></div><div class="act"><button class="btn primary" id="saveest" type="button">שמירה</button></div></section>
 </div><div id="status" role="status" aria-live="polite"></div>
+<script src="/admin/nav.js"></script>
 <script src="@@JS@@"></script>
-'''.replace("@@JS@@", V("assets/market-admin.js"))
+'''.replace("@@JS@@", V("assets/market-admin.js")).replace("/admin/nav.js", V("admin/nav.js"))
 ma += ffoot()
 write("/market/admin/", ma)
 
@@ -311,7 +312,7 @@ ru = fhead("כללי הלוח | " + FORUM, "/market/rules/")
 ru += '<div class="ptitle"><h1>כללי הלוח</h1></div><p class="sub">הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p><div class="fstack">'
 for t, items in RULES:
     ru += '<article class="card"><h3>%s</h3><ul>%s</ul></article>' % (html.escape(t), "".join("<li>%s</li>" % html.escape(x) for x in items))
-ru += '</div>'
+ru += '</div><script src="%s" defer></script>' % V("assets/forum-nav.js")
 ru += ffoot()
 write("/market/rules/", ru)
 # the same rules as data, shown inside the sign-up forms
@@ -361,7 +362,7 @@ _ap = os.path.join(OUT, "admin", "index.html")
 if os.path.exists(_ap):
     with open(_ap, encoding="utf-8") as _f:
         _h = _f.read()
-    for _name in ("assets/style.css", "admin/market.js"):
+    for _name in ("assets/style.css", "admin/board.js", "admin/nav.js"):
         _h = re.sub(r'(["\'])/%s(\?v=[0-9a-f]+)?\1' % re.escape(_name), lambda m: m.group(1) + V(_name) + m.group(1), _h)
     with open(_ap, "w", encoding="utf-8") as _f:
         _f.write(_h)
