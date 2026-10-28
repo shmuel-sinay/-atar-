@@ -332,7 +332,7 @@ def route(h, method, path):
     if sub == "admin/logout" and method == "POST":
         return h.reply(200, {"ok": True}, {"Set-Cookie": "kt_madmin=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"})
     if sub == "admin/me" and method == "GET":
-        return h.reply(200 if admin_ok(h) or h.authed() else 401, {"ok": admin_ok(h) or h.authed()})
+        return h.reply(200 if admin_ok(h) else 401, {"ok": admin_ok(h)})
     if method == "GET" and sub == "categories":
         live = "status IN ('open','taken','done')"
         with db() as c:
@@ -354,6 +354,8 @@ def route(h, method, path):
     u = session_user(h)
     if method == "GET" and sub.startswith("photo/"):
         return serve_photo(h, sub[6:], u)
+    if method == "GET" and (sub == "feed" or re.match(r"^requests/\d+$", sub)):
+        return public_requests(h, sub, u)
     if method == "GET" and sub == "me":
         if not u:
             return h.reply(200, {"user": None})
@@ -432,10 +434,101 @@ def login(h, d):
     return h.reply(200, {"ok": True}, {"Set-Cookie": cookie_for(u["id"])})
 
 
+def first_name(n):
+    parts = (n or "").split()
+    return parts[0] if parts else ""
+
+
+def visible_to(r, u):
+    own = u is not None and u["id"] == r["user_id"]
+    if own:
+        return True
+    if r["status"] not in ("open", "taken", "done"):
+        return False
+    return not (r["only_tagged"] and not (u is not None and r["tagged_pro"] == u["id"]))
+
+
+def level_taken(c, rid, pro_id, level):
+    """First come, first served per level: once a pro of a level has bid, no other pro of that level may."""
+    return c.execute("SELECT 1 FROM bids b JOIN pros p ON p.user_id=b.pro_id WHERE b.request_id=? AND b.pro_id<>? AND p.level=?",
+                     (rid, pro_id, level)).fetchone() is not None
+
+
+def feed_row(c, r, u):
+    au = c.execute("SELECT name FROM users WHERE id=?", (r["user_id"],)).fetchone()
+    o = {"id": r["id"], "title": r["title"], "snippet": (r["descr"] or "")[:140], "category": r["category"], "level": r["level"],
+         "status": r["status"], "created": r["created"], "budget": r["budget"], "author": first_name(au["name"] if au else ""),
+         "bids": c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (r["id"],)).fetchone()[0],
+         "chats": c.execute("SELECT COUNT(*) FROM chats WHERE request_id=?", (r["id"],)).fetchone()[0],
+         "mine": u is not None and u["id"] == r["user_id"], "for_me": u is not None and r["tagged_pro"] == u["id"],
+         "tagged": bool(r["tagged_pro"])}
+    if r["size"] and r["category"] in CATS:
+        o["estimate"] = estimate(r["category"], r["level"] if r["level"] in LEVEL_RANK else "basic", r["size"])
+    return o
+
+
+def public_requests(h, sub, u):
+    from urllib.parse import urlparse, parse_qs
+    q = parse_qs(urlparse(h.path).query)
+    with db() as c:
+        if sub == "feed":
+            cat = (q.get("cat") or [""])[0]
+            st = (q.get("status") or ["open"])[0]
+            text = (q.get("q") or [""])[0].strip()[:60]
+            statuses = {"open": ("open",), "taken": ("taken",), "done": ("done",), "all": ("open", "taken", "done")}.get(st, ("open",))
+            sql = "SELECT * FROM requests WHERE status IN (%s)" % ",".join("?" * len(statuses))
+            args = list(statuses)
+            if cat in CATS:
+                sql += " AND category=?"
+                args.append(cat)
+            if text:
+                sql += " AND (title LIKE ? OR descr LIKE ?)"
+                args += ["%" + text + "%"] * 2
+            sql += " ORDER BY id DESC LIMIT 200"
+            return h.reply(200, [feed_row(c, r, u) for r in c.execute(sql, args).fetchall() if visible_to(r, u)])
+        rid = int(sub.split("/")[1])
+        r = c.execute("SELECT * FROM requests WHERE id=?", (rid,)).fetchone()
+        if not r or not visible_to(r, u):
+            return h.reply(404, {"error": "not found"})
+        own = u is not None and u["id"] == r["user_id"]
+        o = req_out(c, r, own, u["id"] if u else None)
+        au = c.execute("SELECT name FROM users WHERE id=?", (r["user_id"],)).fetchone()
+        o.update({"author": first_name(au["name"] if au else ""), "mine": own, "has_pro": bool(r["taken_pro"]),
+                  "bids_count": c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (rid,)).fetchone()[0],
+                  "chats_count": c.execute("SELECT COUNT(*) FROM chats WHERE request_id=?", (rid,)).fetchone()[0],
+                  "viewer": "owner" if own else "guest"})
+        if own:
+            chats = []
+            for ch in c.execute("SELECT * FROM chats WHERE request_id=? ORDER BY id", (rid,)).fetchall():
+                pu = c.execute("SELECT name FROM users WHERE id=?", (ch["pro_id"],)).fetchone()
+                pp = c.execute("SELECT photo FROM pros WHERE user_id=?", (ch["pro_id"],)).fetchone()
+                last = c.execute("SELECT text FROM chat_msgs WHERE chat_id=? ORDER BY id DESC LIMIT 1", (ch["id"],)).fetchone()
+                chats.append({"id": ch["id"], "name": pu["name"] if pu else "", "photo": "/api/m/photo/%d" % ch["pro_id"] if pp and pp["photo"] == 2 else "",
+                              "unread": unread(c, ch, u["id"]), "last": last["text"][:80] if last else ""})
+            o["chats"] = chats
+        elif u is not None and u["role"] == "pro":
+            o["viewer"] = "pro" if u["status"] == "active" else "pending_pro"
+            if u["status"] == "active":
+                p = c.execute("SELECT * FROM pros WHERE user_id=?", (u["id"],)).fetchone()
+                for_me = r["tagged_pro"] == u["id"]
+                my = c.execute("SELECT * FROM bids WHERE request_id=? AND pro_id=?", (rid, u["id"])).fetchone()
+                blocked = r["status"] == "open" and not for_me and not my and level_taken(c, rid, u["id"], p["level"])
+                allowed = pro_can_see(r, u["id"], LEVEL_RANK.get(p["level"], 1))
+                o.update({"for_me": for_me, "my_bid": {"price": my["price"], "days": my["days"], "note": my["note"]} if my else None,
+                          "can_bid": r["status"] == "open" and allowed and not blocked, "bid_blocked": blocked,
+                          "level_too_high": r["status"] == "open" and not allowed, "chat": chat_info(c, rid, u["id"], u["id"])})
+                if r["taken_pro"] == u["id"]:
+                    cl = c.execute("SELECT name, email FROM users WHERE id=?", (r["user_id"],)).fetchone()
+                    o["client"] = {"name": cl["name"], "email": cl["email"], "contact": r["contact"]}
+        elif u is not None:
+            o["viewer"] = "client"
+        return h.reply(200, o)
+
+
 def req_out(c, r, with_bids, viewer_id=None):
     o = {"id": r["id"], "title": r["title"], "desc": r["descr"], "category": r["category"], "level": r["level"],
          "size": r["size"], "budget": r["budget"], "status": r["status"], "created": r["created"],
-         "rated": bool(c.execute("SELECT 1 FROM ratings WHERE request_id=?", (r["id"],)).fetchone())}
+         "rated": bool(c.execute("SELECT 1 FROM ratings WHERE request_id=?", (r["id"],)).fetchone()), "has_pro": bool(r["taken_pro"])}
     if r["tagged_pro"]:
         t = c.execute("SELECT name FROM users WHERE id=?", (r["tagged_pro"],)).fetchone()
         o["tagged"] = {"id": r["tagged_pro"], "name": t["name"] if t else "", "only": bool(r["only_tagged"])}
@@ -496,7 +589,13 @@ def client_routes(h, method, sub, d, u):
                 return h.reply(404, {"error": "not found"})
             c.execute("UPDATE requests SET status='taken', chosen_bid=?, taken_pro=? WHERE id=?", (b["id"], b["pro_id"], rid))
             return h.reply(200, {"ok": True})
-        if method == "POST" and sub == "requests/done" and r["status"] == "taken":
+        if method == "POST" and sub == "requests/found" and r["status"] == "open":
+            c.execute("UPDATE requests SET status='taken' WHERE id=?", (rid,))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "requests/reopen" and r["status"] == "taken":
+            c.execute("UPDATE requests SET status='open', chosen_bid=NULL, taken_pro=NULL WHERE id=?", (rid,))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "requests/done" and r["status"] in ("taken", "open"):
             c.execute("UPDATE requests SET status='done' WHERE id=?", (rid,))
             award(c, u, rid)
             return h.reply(200, {"ok": True})
@@ -552,6 +651,9 @@ def pro_routes(h, method, sub, d, u):
             price, days = clip(d.get("price"), 40), clip(d.get("days"), 40)
             if not price:
                 return h.reply(400, {"error": "fields"})
+            mine = c.execute("SELECT 1 FROM bids WHERE request_id=? AND pro_id=?", (rid, u["id"])).fetchone()
+            if not mine and r["tagged_pro"] != u["id"] and level_taken(c, rid, u["id"], p["level"]):
+                return h.reply(409, {"error": "level_taken"})
             c.execute("INSERT INTO bids(request_id,pro_id,price,days,note,created) VALUES(?,?,?,?,?,?) "
                       "ON CONFLICT(request_id,pro_id) DO UPDATE SET price=excluded.price, days=excluded.days, note=excluded.note",
                       (rid, u["id"], price, days, clip(d.get("note"), 600), int(time.time())))
@@ -673,7 +775,7 @@ def chat_routes(h, method, sub, d, u):
 
 # ---------------------------------------------------------------- admin API
 def admin(h, method, path):
-    if not (admin_ok(h) or h.authed()):
+    if not admin_ok(h):
         return h.reply(401, {"error": "login"})
     try:
         return admin_route(h, method, path[len("/api/admin/m/"):])

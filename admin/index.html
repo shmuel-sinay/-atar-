@@ -9,20 +9,23 @@
 <link rel="stylesheet" href="/assets/style.css?v=69ec5033">
 <style>
 [hidden]{display:none!important}
-body{font-size:16px}
-.bar{background:var(--green-deep);color:#f4efe0;padding:12px 0}
+body{font-size:16px;background:var(--bg)}
+.bar{background:var(--green-deep);color:#f4efe0;padding:14px 0;border-bottom:3px solid var(--gold)}
 .bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .bar h1{margin:0;font-size:1.2rem}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0}
-.tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 18px;border-radius:999px;font:inherit;cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--green);color:#fff;border-color:var(--green)}
+.bar a{color:#f4efe0}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:18px 0;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;color:var(--ink-soft);padding:10px 18px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--green);font-weight:700;border-bottom-color:var(--gold)}
 .panel{display:none}.panel.on{display:block}
-.box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:0 1px 3px #0000000d}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 label.f{display:grid;gap:4px;font-size:.88rem;color:var(--ink-soft)}
 input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold-soft);border-color:var(--gold)}
 .act{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.sm{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.sm{padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.sm:hover{border-color:var(--green)}
 .sm.danger{color:#a02a1c;border-color:#e0b4ad}
 .thumb{width:84px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--gold-soft)}
 .msg{white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
@@ -44,7 +47,6 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
   <div class="bar"><div class="wrap"><h1>ניהול האתר</h1>
     <span><a href="/" style="margin-inline-end:14px">לאתר</a><button class="sm" id="out" type="button">יציאה</button></span></div></div>
   <div class="wrap">
-    <section id="boardbox" class="box" hidden></section>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="products" aria-selected="true">מוצרים</button>
       <button role="tab" data-tab="services" aria-selected="false">שירותים ומחירים</button>
@@ -177,7 +179,7 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
         el("span", { cls: "meta", text: "  ·  " + (m.time || "") })]);
       var who = el("div", { cls: "meta", text: (m.name || "") + "  ·  " + (m.contact || "") });
       box.appendChild(el("div", { cls: "box" }, [head, who, el("p", { cls: "msg", text: m.message || "" }),
-        el("div", { cls: "act" }, [btn("העבר ללוח", function () { if (window.forwardToBoard) window.forwardToBoard(m); }), btn("מחיקה", function () {
+        el("div", { cls: "act" }, [btn("מחיקה", function () {
           if (!confirm("למחוק את ההודעה?")) return;
           api("POST", "/api/admin/messages/delete", { ids: [m.id] }).then(loadMessages);
         }, true)])]));
@@ -225,7 +227,5 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
   fetch("/api/admin/me", { credentials: "same-origin" }).then(function (r) { r.ok ? showApp() : showLogin(); }).catch(showLogin);
 })();
 </script>
-<script src="/admin/nav.js?v=5bf12c1c"></script>
-<script src="/admin/board.js?v=875261c7"></script>
 </body>
 </html>

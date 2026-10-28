@@ -27,7 +27,9 @@
     var credits = d.credits.filter(function (c) { return c.status === "pending"; });
     var total = reqs.length + pros.length + photos.length + credits.length;
     box.hidden = false; box.textContent = "";
-    box.appendChild(el("strong", { text: total ? "הלוח: " + total + " דברים ממתינים לאישור שלך" : "הלוח: אין כרגע דבר שממתין לאישור" }));
+    var head = el("div", { cls: "act", style: "justify-content:space-between;margin:0" }, [el("strong", { text: total ? total + " דברים ממתינים לאישור שלך" : "אין כרגע דבר שממתין לאישור" }),
+      btn("פרסום בקשה בשם לקוח", function () { window.forwardToBoard({}); })]);
+    box.appendChild(head);
     function after() { note("נשמר"); refresh(); }
     function row(text, buttons) { box.appendChild(el("div", { cls: "act", style: "margin-top:8px" }, [el("span", { text: text })].concat(buttons))); }
     reqs.forEach(function (r) {
@@ -50,8 +52,8 @@
         btn("אישור", function () { call("POST", "credit", { id: c.id, status: "approved" }).then(after); }),
         btn("דחייה", function () { call("POST", "credit", { id: c.id, status: "rejected" }).then(after); }, true)]);
     });
-    box.appendChild(el("p", { cls: "meta", style: "margin:10px 0 0" }, ["לניהול מלא של הלוח: ", el("a", { href: "/market/admin/", text: "/market/admin/" })]));
-    document.title = (total ? "(" + total + ") " : "") + "ניהול | כושר טק";
+    
+    document.title = (total ? "(" + total + ") " : "") + "ניהול | מלאכת מחשבת";
   }
   function refresh() { return call("GET", "overview").then(render).catch(function () {}); }
 
