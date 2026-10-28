@@ -156,6 +156,9 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(b)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
         for k, v in (headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -171,6 +174,13 @@ class H(BaseHTTPRequestHandler):
             if k == "kt_admin" and check_token(v):
                 return True
         return False
+    def cross_site(self):
+        # writes must come from our own pages: a foreign Origin is refused even if a browser sent cookies
+        o = self.headers.get("Origin")
+        if not o:
+            return False
+        host = (self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or "").lower()
+        return o.lower().split("://", 1)[-1].rstrip("/") != host
     def path_only(self):
         return self.path.split("?", 1)[0].rstrip("/")
 
@@ -200,6 +210,8 @@ class H(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         p = self.path_only()
+        if self.cross_site():
+            return self.reply(403, {"error": "origin"})
         if p.startswith("/api/m/"):
             return market.handle(self, "PUT", p)
         if p.startswith("/api/admin/m/"):
@@ -219,6 +231,8 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path_only()
+        if self.cross_site():
+            return self.reply(403, {"error": "origin"})
         if p.startswith("/api/m/"):
             return market.handle(self, "POST", p)
         if p.startswith("/api/admin/m/"):

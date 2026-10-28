@@ -142,7 +142,7 @@
     group("מכפיל לפי רמה", "level_mult", LEVELMAP, "מוכפל במחיר הבסיס.");
     group("מכפיל לפי גודל", "size_mult", SIZEMAP, "מוכפל במחיר הבסיס.");
     group("תגמול שותפים", "reward", { amount: "תגמול לכל מבקש חדש (" + data.unit + ")" }, "נוצר כשהעבודה הראשונה של מבקש שהוזמן מסתיימת, ומחכה לאישורך.");
-    eb.appendChild(el("p", { cls: "meta", text: "ההערכה שמוצגת: בסיס × רמה × גודל, בטווח של 80% עד 130%." }));
+    eb.appendChild(el("p", { cls: "meta", text: "מחירי הבסיס והמכפילים לשימוש פנימי שלך בלבד. הם לא מוצגים למשתמשים." }));
     document.getElementById("saveest").onclick = function () {
       var out = { base: {}, level_mult: {}, size_mult: {}, reward: {} };
       Object.keys(inputs).forEach(function (k) { var p = k.split("."); out[p[0]][p[1]] = Number(inputs[k].value); });
@@ -162,4 +162,34 @@
     if (++tries < 200) setTimeout(wait, 300);
   })();
   document.getElementById("go").addEventListener("click", function () { tries = 0; setTimeout(function () { (function w() { if (!document.getElementById("app").hidden) load(); else if (++tries < 40) setTimeout(w, 300); })(); }, 300); });
+})();
+
+(function () {
+  function el(t, cls, txt) { var e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function call(m, u, b) {
+    return fetch("/api/admin/m/" + u, { method: m, credentials: "same-origin", headers: b ? { "Content-Type": "application/json" } : {}, body: b ? JSON.stringify(b) : undefined })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function load() {
+    call("GET", "contact").then(function (rows) {
+      var box = document.getElementById("klist"); box.textContent = "";
+      var open = rows.filter(function (r) { return !r.done; }).length;
+      document.getElementById("kcount").textContent = open ? "(" + open + ")" : "";
+      if (!rows.length) box.appendChild(el("p", "meta", "אין פניות."));
+      rows.forEach(function (r) {
+        var card = el("div", "card" + (r.done ? " done" : ""));
+        card.appendChild(el("strong", "", (r.subject || "ללא נושא") + (r.done ? " · טופל" : "")));
+        card.appendChild(el("p", "meta", r.name + " · " + r.contact + " · " + new Date(r.created * 1000).toLocaleString("he-IL") + (r.user_id ? " · משתמש רשום #" + r.user_id : "")));
+        var msg = el("p", "", r.message); msg.style.whiteSpace = "pre-wrap"; card.appendChild(msg);
+        var act = el("div", "act"), d = el("button", "btn sm", r.done ? "סמן כפתוח" : "סמן כטופל"), x = el("button", "btn sm", "מחיקה");
+        d.type = x.type = "button";
+        d.onclick = function () { call("POST", "contact/done", { id: r.id }).then(load); };
+        x.onclick = function () { if (confirm("למחוק את הפנייה?")) call("POST", "contact/delete", { id: r.id }).then(load); };
+        act.appendChild(d); act.appendChild(x); card.appendChild(act); box.appendChild(card);
+      });
+    }).catch(function () {});
+  }
+  var tries = 0;
+  (function wait() { if (!document.getElementById("app").hidden) return load(); if (++tries < 200) setTimeout(wait, 300); })();
+  document.querySelectorAll(".tabs button").forEach(function (b) { b.addEventListener("click", function () { if (b.dataset.tab === "contact") load(); }); });
 })();
