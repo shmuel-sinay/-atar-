@@ -41,7 +41,7 @@
       var lines = [el("strong", { text: u.name }), el("div", { cls: "meta", text: u.email + " · " + ROLE[u.role] + " · " + UST[u.status] })];
       var lvl, rating;
       if (u.role === "pro") {
-        lines.push(el("div", { cls: "meta", text: (u.kind === "company" ? "חברה" : "פרטי") + " · " + (u.field || "") }));
+        lines.push(el("div", { cls: "meta", text: (u.kind === "company" ? "חברה" : "פרטי") + " · " + (u.field || "") + (u.founding ? " · חבר מייסד" : "") }));
         if (u.bio) lines.push(el("p", { cls: "msg", text: u.bio }));
         if (u.links) lines.push(el("div", { cls: "meta", text: u.links.replace(/\n/g, "  ") }));
         lines.push(el("div", { cls: "meta", text: "דירוג לקוחות: " + (u.client_rating || "אין") + " (" + u.rating_count + ")" }));
@@ -58,6 +58,7 @@
       function set(extra) { call("POST", "user", Object.assign({ id: u.id }, extra)).then(function () { note("נשמר"); load(); }).catch(function () { note("השמירה נכשלה"); }); }
       if (u.status !== "active") acts.appendChild(btn("אישור", function () { set({ status: "active" }); }));
       if (u.status !== "blocked") acts.appendChild(btn("חסימה", function () { if (confirm("לחסום את " + u.name + "?")) set({ status: "blocked" }); }, true));
+      if (u.role === "pro") acts.appendChild(btn(u.founding ? "ביטול חבר מייסד" : "סימון כחבר מייסד (שנה בלי עמלה)", function () { set({ founding: !u.founding }); }));
       if (u.role === "pro" && u.photo === 1) acts.appendChild(btn("אישור תמונה", function () { call("POST", "photo", { id: u.id, ok: true }).then(function () { note("נשמר"); load(); }); }));
       if (u.role === "pro" && u.photo) acts.appendChild(btn("הסרת תמונה", function () { call("POST", "photo", { id: u.id, ok: false }).then(function () { note("נשמר"); load(); }); }, true));
       if (u.role === "pro") {

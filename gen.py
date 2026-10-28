@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, html
+import os, re, html, hashlib
 OUT = os.environ.get("KT_OUT", ".")
 PHONE_DISPLAY = "055-440-7560"
 PHONE_TEL = "0554407560"
@@ -16,6 +16,14 @@ ICONS = {
  "bolt": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
 }
 
+def V(path):
+    """URL with a content hash, so a changed asset is never served from an old cache."""
+    try:
+        with open(os.path.join(OUT, path.lstrip("/")), "rb") as f:
+            return "/%s?v=%s" % (path.lstrip("/"), hashlib.md5(f.read()).hexdigest()[:8])
+    except OSError:
+        return path
+
 NAV = [("/", "בית"), ("/services/", "שירותים"), ("/android/", "אנדרואיד"), ("/shop/", "חנות"),
        ("/contact/", "צור קשר")]
 
@@ -30,7 +38,7 @@ def head(title, desc, path):
 <meta name="description" content="{html.escape(desc)}">
 <meta name="theme-color" content="#0a3326">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="{V("assets/style.css")}">
 </head>
 <body>
 <header class="site"><div class="wrap">
@@ -50,7 +58,7 @@ def foot():
   </div>
   <div class="legal">© כושר טק</div>
 </div></footer>
-<script src="/assets/site.js" defer></script>
+<script src="{V("assets/site.js")}" defer></script>
 </body></html>
 '''
 
@@ -169,13 +177,13 @@ def fhead(title, path):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#1e1b4b">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/assets/forum-icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/forum.css">
+<link rel="stylesheet" href="{V("assets/forum.css")}">
 </head>
 <body class="forum">
 <header class="fbar"><div class="fwrap">
-  <a class="fbrand" href="/market/"><span class="fmark"></span>{FORUM}</a>
+  <a class="fbrand" href="/market/">{FORUM}</a>
   <nav><a href="/market/"{' aria-current="page"' if path == "/market/" else ""}>הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/"{' aria-current="page"' if path == "/market/rules/" else ""}>כללי הלוח</a></nav>
   <div id="fuser" class="fuser"></div>
 </div></header>
@@ -204,11 +212,9 @@ write("/request/", r)
 
 # ---------- MARKET ----------
 mk = fhead(FORUM, "/market/")
-mk += '''<div id="fland"><div class="fhero"><h1>%s</h1><p class="flead">מבקשים. מציעים. עושים.</p><p>לוח שמחבר בין מי שצריך עבודה, תוכנה או שירות לבין אנשי מקצוע וחברות שאושרו. כל בקשה, כל הצטרפות וכל תמונה עוברות אישור ידני של ההנהלה.</p></div>
-<div class="fsteps"><div><span>1</span><h3>מפרסמים בקשה</h3><p>מתארים מה צריך, ומקבלים הערכת מחיר ראשונית.</p></div><div><span>2</span><h3>מקבלים הצעות</h3><p>אנשי מקצוע מציעים מחיר וזמן, אפשר לשוחח איתם בצ'אט פרטי.</p></div><div><span>3</span><h3>בוחרים ומדרגים</h3><p>בוחרים הצעה, פרטי הקשר נחשפים רק לנבחר, ובסיום מדרגים.</p></div></div></div>
-<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
-<script src="/assets/market.js" defer></script>
-''' % FORUM
+mk += '''<noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
+<script src="%s" defer></script>
+''' % V("assets/market.js")
 mk += ffoot()
 write("/market/", mk)
 
@@ -255,6 +261,7 @@ RULES = [
   "בעתיד תיגבה עמלה על עבודות שנסגרו דרך הלוח. כל מי שמצטרף ומשתמש בלוח מצהיר שהוא מבין זאת ומסכים לכך.",
   "שיעור העמלה ואופן גבייתה יפורסמו מראש ובכתב, ולא יחולו על עבודה שנלקחה לפני הפרסום.",
   "אין לעקוף את הלוח כדי להימנע מעמלה בעבודה שהוכרה דרכו.",
+  "אנשי מקצוע שהוכרו כחברים מייסדים פטורים מעמלה לתקופה של שנה מיום ההכרה בהם, והתקופה אינה כוללת שינוי מעמד.",
  ]),
  ("7. פרטיות ושמירת מידע", [
   "פרטי קשר נחשפים רק במקרים הנדרשים לביצוע העבודה, כאמור בסעיף 5.",
@@ -268,7 +275,7 @@ RULES = [
   "כל אחד מהצדדים אחראי לעצמו לכל הנובע מן העבודה שהוא מזמין או מבצע.",
  ]),
  ("9. תוכנית שותפים", [
-  "חבר בלוח יכול להזמין מבקש חדש בקישור האישי שלו. כשהעבודה הראשונה של המבקש שהוזמן מסתיימת, השותף עשוי לקבל תגמול, בכסף או בקרדיטים, לפי הקביעה של מנהל הלוח.",
+  "חבר בלוח יכול להזמין מבקש חדש בקישור האישי שלו. כשהעבודה הראשונה של המבקש שהוזמן מסתיימת, מי שהזמין עשוי לקבל תגמול, בכסף או בקרדיטים, לפי הקביעה של מנהל הלוח.",
   "כל תגמול מאושר ידנית. מנהל הלוח רשאי לדחות, לשנות או לבטל תגמול ואת התוכנית כולה, בכל עת.",
   "אין תגמול על הזמנה עצמית, על חשבונות כפולים או על הזמנה שנעשתה בספאם או בהטעיה.",
  ]),
@@ -281,7 +288,7 @@ RULES = [
  ]),
 ]
 ru = fhead("כללי הלוח | " + FORUM, "/market/rules/")
-ru += '<div class="fhero"><h1>כללי הלוח</h1><p>הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p></div><div class="fstack">'
+ru += '<div class="ptitle"><h1>כללי הלוח</h1></div><p class="sub">הכללים נועדו לשמור על לוח נקי, אמין ומתאים לציבור. נא לקרוא לפני ההצטרפות.</p><div class="fstack">'
 for t, items in RULES:
     ru += '<article class="card"><h3>%s</h3><ul>%s</ul></article>' % (html.escape(t), "".join("<li>%s</li>" % html.escape(x) for x in items))
 ru += '</div>'
@@ -329,4 +336,13 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
 k += foot()
 write("/contact/", k)
 # home written into site/index.html (the helper wrote it to site/index.html via "")
+# the admin page is hand-written: refresh its asset versions too
+_ap = os.path.join(OUT, "admin", "index.html")
+if os.path.exists(_ap):
+    with open(_ap, encoding="utf-8") as _f:
+        _h = _f.read()
+    for _name in ("assets/style.css", "admin/market.js"):
+        _h = re.sub(r'(["\'])/%s(\?v=[0-9a-f]+)?\1' % re.escape(_name), lambda m: m.group(1) + V(_name) + m.group(1), _h)
+    with open(_ap, "w", encoding="utf-8") as _f:
+        _f.write(_h)
 print("pages generated")
