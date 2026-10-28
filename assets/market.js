@@ -499,7 +499,7 @@
     }
     out.push(el("div", { cls: "scard" }, [el("h3", { text: "ניהול הבקשה" }), btns]));
 
-    var bidsBox = el("div", { cls: "panel" }, [el("h3", { text: "הצעות מחיר (" + (r.bids || []).length + ")" })]);
+    var bidsBox = el("div", { cls: "tabbody" });
     if (!(r.bids || []).length) bidsBox.appendChild(el("p", { cls: "sub", text: "עדיין אין הצעות. אנשי מקצוע יראו את הבקשה ויגישו הצעות כאן." }));
     (r.bids || []).forEach(function (b) {
       var row = el("div", { cls: "mk-bid" + (b.chosen ? " chosen" : "") }, [el("div", { cls: "bidtop" }, [
@@ -516,10 +516,8 @@
       row.appendChild(acts);
       bidsBox.appendChild(row);
     });
-    out.push(bidsBox);
-
-    var chatsBox = el("div", { cls: "panel" }, [el("h3", { text: "שיחות עם בעלי מקצוע (" + (r.chats || []).length + ")" })]);
-    if (!(r.chats || []).length) chatsBox.appendChild(el("p", { cls: "sub", text: "בעלי מקצוע שיפתחו שיחה על הבקשה יופיעו כאן." }));
+    var chatsBox = el("div", { cls: "tabbody" });
+    if (!(r.chats || []).length) chatsBox.appendChild(el("p", { cls: "sub", text: "עדיין אין שיחות. אפשר לפתוח שיחה מתוך כל הצעה, ובעלי מקצוע יכולים לכתוב לך גם בלי להגיש הצעה." }));
     (r.chats || []).forEach(function (c) {
       var row = el("button", { type: "button", cls: "cm-row" }, [avatar({ name: c.name, photo: c.photo }),
         el("span", { cls: "cm-txt" }, [el("strong", { text: c.name }), el("span", { cls: "meta", text: c.last })]),
@@ -527,7 +525,21 @@
       row.addEventListener("click", function () { openChat(c.id, c.name + " · " + r.title); });
       chatsBox.appendChild(row);
     });
-    out.push(chatsBox);
+    var unread = (r.chats || []).reduce(function (n, c) { return n + (c.unread || 0); }, 0);
+    var tabsKey = "mk_tab_" + r.id, cur = "bids";
+    try { cur = sessionStorage.getItem(tabsKey) || "bids"; } catch (e) {}
+    var bar = el("div", { cls: "ptabs", role: "tablist" }), panel = el("div", { cls: "panel tabbed" }, [bar]);
+    function show(k) {
+      cur = k; try { sessionStorage.setItem(tabsKey, k); } catch (e) {}
+      Array.prototype.forEach.call(bar.children, function (b) { var on = b.dataset.k === k; b.className = on ? "on" : ""; b.setAttribute("aria-selected", on ? "true" : "false"); });
+      bidsBox.hidden = k !== "bids"; chatsBox.hidden = k !== "chats";
+    }
+    [["bids", "הצעות מחיר", (r.bids || []).length, 0], ["chats", "שיחות", (r.chats || []).length, unread]].forEach(function (t) {
+      var b = el("button", { type: "button", role: "tab" }, [document.createTextNode(t[1] + " (" + t[2] + ")"), t[3] ? el("span", { cls: "badge", text: String(t[3]) }) : null]);
+      b.dataset.k = t[0]; b.addEventListener("click", function () { show(t[0]); }); bar.appendChild(b);
+    });
+    panel.appendChild(bidsBox); panel.appendChild(chatsBox); show(cur);
+    out.push(panel);
     return out;
   }
 

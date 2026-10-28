@@ -196,7 +196,7 @@ def ffoot():
     return '''</div></main>
 <footer class="ffoot"><div class="fwrap">
   <div><span class="fname">'''+FORUM+'''</span> · <span>כל בקשה ואיש מקצוע מאושרים ידנית</span></div>
-  <nav><a href="/market/">הלוח</a><a href="/market/#/pros">אנשי מקצוע</a><a href="/market/rules/">כללי הלוח</a><a href="/market/#/contact">צור קשר עם ההנהלה</a></nav>
+  <a href="/market/#/contact">צור קשר עם ההנהלה</a>
 </div></footer>
 </body></html>
 '''
