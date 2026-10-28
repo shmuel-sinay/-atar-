@@ -169,3 +169,31 @@ ul.feat li{background:var(--card);border:1px solid var(--line);border-inline-sta
 .cmp-diff th{background:var(--green);color:#fff}
 .cmp-diff td:first-child{font-weight:700}
 @media (max-width:760px){.cmp{grid-template-columns:1fr}}
+.quizcta{display:flex;justify-content:space-between;align-items:center;gap:14px 24px;flex-wrap:wrap;margin-top:18px;background:color-mix(in srgb,var(--gold-soft) 55%,var(--card));border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.quizcta div{display:grid;gap:2px}.quizcta span{color:var(--ink-soft)}
+.quiz{margin-top:18px}
+.linkbtn{font:inherit;background:none;border:0;color:var(--green);text-decoration:underline;cursor:pointer;padding:4px}
+/* product card, livelier */
+.product{gap:12px}
+.pimgwrap{position:relative}
+.ribbon{position:absolute;top:14px;inset-inline-start:-6px;padding:5px 14px 5px 12px;font-size:.85rem;font-weight:700;color:#fff;border-radius:6px 0 0 6px;box-shadow:0 4px 10px -4px #0006}
+.ribbon.flat{position:static;justify-self:start;border-radius:999px}
+.r-in{background:var(--green)}.r-out{background:#b4532a}.r-order{background:#7a5d1d}
+.ptitle{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ptitle h3{margin:0;font-size:1.5rem}
+.pprice{font-size:1.25rem;font-weight:800;color:var(--green)}
+.plead{color:var(--ink-soft)}
+ul.specs.chips{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+ul.specs.chips li{background:color-mix(in srgb,var(--gold-soft) 55%,var(--card));border-radius:999px;padding:3px 12px;font-size:.9rem;color:var(--ink)}
+.vpick{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:12px}
+.vhead{display:flex;justify-content:space-between;align-items:center}
+.vtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.vtile{font:inherit;display:grid;justify-items:start;gap:2px;text-align:start;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;position:relative;transition:border-color .15s,transform .15s}
+.vtile:hover{border-color:var(--gold);transform:translateY(-1px)}
+.vtile.on{border-color:var(--green);background:color-mix(in srgb,var(--green) 12%,var(--card))}
+.vnum{font-size:1.3rem;font-weight:800;color:var(--gold);line-height:1}
+.vtile.on .vnum{color:var(--green)}
+.vtile strong{font-size:.95rem}.vtile small{color:var(--ink-soft);font-size:.8rem}
+.pcta{justify-self:stretch;text-align:center;font-size:1.05rem;padding-block:12px}
+@media (max-width:480px){.vtiles{grid-template-columns:1fr}}
+.product .btn.pcta{width:100%;justify-self:stretch}
