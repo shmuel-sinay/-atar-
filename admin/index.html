@@ -48,6 +48,10 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
       <button role="tab" data-tab="products" aria-selected="true">מוצרים</button>
       <button role="tab" data-tab="services" aria-selected="false">שירותים ומחירים</button>
       <button role="tab" data-tab="messages" aria-selected="false">הודעות <span id="mcount"></span></button>
+      <button role="tab" data-tab="users" aria-selected="false">משתמשים <span id="ucount"></span></button>
+      <button role="tab" data-tab="mreq" aria-selected="false">בקשות <span id="rcount"></span></button>
+      <button role="tab" data-tab="partners" aria-selected="false">שותפים <span id="pcount"></span></button>
+      <button role="tab" data-tab="est" aria-selected="false">הערכת מחיר</button>
     </div>
 
     <section class="panel on" id="p-products">
@@ -66,6 +70,11 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
       <div id="mlist"></div>
       <div class="act"><button class="sm" id="reload" type="button">רענון</button></div>
     </section>
+    <section class="panel" id="p-users"><div id="ulist"></div></section>
+    <section class="panel" id="p-mreq"><div id="rlist"></div></section>
+    <section class="panel" id="p-partners"><div id="clist"></div></section>
+    <section class="panel" id="p-est"><div id="elist"></div>
+      <div class="act"><button class="btn primary" id="saveest" type="button">שמירה</button></div></section>
   </div>
 </div>
 <div id="status" role="status" aria-live="polite"></div>
@@ -224,5 +233,6 @@ input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line)
   fetch("/api/admin/me", { credentials: "same-origin" }).then(function (r) { r.ok ? showApp() : showLogin(); }).catch(showLogin);
 })();
 </script>
+<script src="/admin/market.js"></script>
 </body>
 </html>
