@@ -58,7 +58,7 @@ def init(secret, directory):
         CREATE TABLE IF NOT EXISTS ratings(request_id INTEGER PRIMARY KEY, pro_id INTEGER NOT NULL, stars INTEGER NOT NULL,
           text TEXT, created INTEGER NOT NULL);
         """)
-        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE pros ADD COLUMN founding_until INTEGER", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
+        for stmt in ("ALTER TABLE pros ADD COLUMN exp TEXT", "ALTER TABLE users ADD COLUMN terms_at INTEGER", "ALTER TABLE users ADD COLUMN ref_code TEXT", "ALTER TABLE pros ADD COLUMN founding_until INTEGER", "ALTER TABLE requests ADD COLUMN via_admin INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN referred_by INTEGER", "ALTER TABLE pros ADD COLUMN photo INTEGER NOT NULL DEFAULT 0",
                      "ALTER TABLE requests ADD COLUMN tagged_pro INTEGER", "ALTER TABLE requests ADD COLUMN only_tagged INTEGER NOT NULL DEFAULT 0"):
             try:
                 c.execute(stmt)
@@ -574,6 +574,17 @@ def award(c, client, rid):
                   (ref, client["id"], rid, amount, int(time.time())))
 
 
+def sys_client(c):
+    """The account under which the admin posts a request on behalf of a business customer."""
+    u = c.execute("SELECT id FROM users WHERE email='system@kosher-tek.local'").fetchone()
+    if u:
+        return u["id"]
+    import secrets
+    cur = c.execute("INSERT INTO users(email,name,pw,role,status,created,ref_code) VALUES(?,?,?,?,?,?,?)",
+                    ("system@kosher-tek.local", "כושר טק (בשם לקוח)", hash_pw(secrets.token_hex(16)), "client", "active", int(time.time()), new_code(c)))
+    return cur.lastrowid
+
+
 def pro_can_see(r, uid, rank):
     if r["tagged_pro"] == uid:
         return True
@@ -694,10 +705,14 @@ def admin_route(h, method, sub):
             reqs = []
             order = {"review": 0, "open": 1, "taken": 2, "done": 3, "closed": 4}
             for r in c.execute("SELECT * FROM requests").fetchall():
-                o = req_out(c, r, False)
+                o = req_out(c, r, bool(r["via_admin"]))
                 cl = c.execute("SELECT name, email FROM users WHERE id=?", (r["user_id"],)).fetchone()
                 o["client"] = {"name": cl["name"], "email": cl["email"], "contact": r["contact"]}
+                o["via_admin"] = bool(r["via_admin"])
                 o["bids_count"] = c.execute("SELECT COUNT(*) FROM bids WHERE request_id=?", (r["id"],)).fetchone()[0]
+                for bd in o.get("bids", []):
+                    em = c.execute("SELECT email FROM users WHERE id=?", (bd["pro"]["id"],)).fetchone()
+                    bd["pro"]["email"] = em["email"] if em else ""
                 reqs.append(o)
             reqs.sort(key=lambda x: (order.get(x["status"], 9), -x["id"]))
             credits = []
@@ -725,6 +740,25 @@ def admin_route(h, method, sub):
                     except Exception:
                         v = None
                     c.execute("UPDATE pros SET admin_rating=? WHERE user_id=?", (v, uid))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "forward":
+            title, desc = clip(d.get("title"), 120), clip(d.get("desc"), 3000)
+            if len(title) < 3 or len(desc) < 10:
+                return h.reply(400, {"error": "fields"})
+            cat = d.get("category") if d.get("category") in CATS else "other"
+            level = d.get("level") if d.get("level") in LEVEL_RANK else "any"
+            c.execute("INSERT INTO requests(user_id,title,descr,category,level,size,budget,contact,status,created,via_admin) "
+                      "VALUES(?,?,?,?,?,?,?,?,'open',?,1)",
+                      (sys_client(c), title, desc, cat, level, d.get("size") if d.get("size") in SIZES else "small",
+                       clip(d.get("budget"), 60), clip(d.get("contact"), 150), int(time.time())))
+            return h.reply(200, {"ok": True})
+        if method == "POST" and sub == "choose":
+            rid = int(d.get("request_id") or 0)
+            r = c.execute("SELECT * FROM requests WHERE id=? AND via_admin=1 AND status='open'", (rid,)).fetchone()
+            b = c.execute("SELECT * FROM bids WHERE id=? AND request_id=?", (int(d.get("bid_id") or 0), rid)).fetchone() if r else None
+            if not b:
+                return h.reply(404, {"error": "not found"})
+            c.execute("UPDATE requests SET status='taken', chosen_bid=?, taken_pro=? WHERE id=?", (b["id"], b["pro_id"], rid))
             return h.reply(200, {"ok": True})
         if method == "POST" and sub == "credit":
             if d.get("status") not in ("pending", "approved", "paid", "rejected"):
