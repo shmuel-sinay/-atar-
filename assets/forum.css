@@ -103,3 +103,4 @@ p.sub{color:var(--soft)}
 .mk-dtabs a.on{color:var(--brand);border-bottom-color:var(--accent)}
 .pcard{display:grid;gap:6px;text-decoration:none;color:var(--ink)}
 .pcard:hover{border-color:var(--accent)}
+@media (max-width:640px){.fbar .fwrap{flex-wrap:wrap;padding:8px 0}.fbar nav{order:3;width:100%;justify-content:space-between}.fbar nav a{padding:6px 10px;font-size:.88rem;white-space:nowrap}.fbrand{font-size:1.05rem}}

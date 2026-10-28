@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, html
+import os, re, html, hashlib
 OUT = os.environ.get("KT_OUT", ".")
 PHONE_DISPLAY = "055-440-7560"
 PHONE_TEL = "0554407560"
@@ -16,6 +16,14 @@ ICONS = {
  "bolt": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
 }
 
+def V(path):
+    """URL with a content hash, so a changed asset is never served from an old cache."""
+    try:
+        with open(os.path.join(OUT, path.lstrip("/")), "rb") as f:
+            return "/%s?v=%s" % (path.lstrip("/"), hashlib.md5(f.read()).hexdigest()[:8])
+    except OSError:
+        return path
+
 NAV = [("/", "בית"), ("/services/", "שירותים"), ("/android/", "אנדרואיד"), ("/shop/", "חנות"),
        ("/contact/", "צור קשר")]
 
@@ -30,7 +38,7 @@ def head(title, desc, path):
 <meta name="description" content="{html.escape(desc)}">
 <meta name="theme-color" content="#0a3326">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="{V("assets/style.css")}">
 </head>
 <body>
 <header class="site"><div class="wrap">
@@ -50,7 +58,7 @@ def foot():
   </div>
   <div class="legal">© כושר טק</div>
 </div></footer>
-<script src="/assets/site.js" defer></script>
+<script src="{V("assets/site.js")}" defer></script>
 </body></html>
 '''
 
@@ -171,7 +179,7 @@ def fhead(title, path):
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1e1b4b">
 <link rel="icon" href="/assets/forum-icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/forum.css">
+<link rel="stylesheet" href="{V("assets/forum.css")}">
 </head>
 <body class="forum">
 <header class="fbar"><div class="fwrap">
@@ -207,8 +215,8 @@ mk = fhead(FORUM, "/market/")
 mk += '''<div id="fland"><div class="fhero"><h1>%s</h1><p class="flead">מבקשים. מציעים. עושים.</p><p>לוח שמחבר בין מי שצריך עבודה, תוכנה או שירות לבין אנשי מקצוע וחברות שאושרו. כל בקשה, כל הצטרפות וכל תמונה עוברות אישור ידני של ההנהלה.</p></div>
 <div class="fsteps"><div><span>1</span><h3>מפרסמים בקשה</h3><p>מתארים מה צריך, ומקבלים הערכת מחיר ראשונית.</p></div><div><span>2</span><h3>מקבלים הצעות</h3><p>אנשי מקצוע מציעים מחיר וזמן, אפשר לשוחח איתם בצ'אט פרטי.</p></div><div><span>3</span><h3>בוחרים ומדרגים</h3><p>בוחרים הצעה, פרטי הקשר נחשפים רק לנבחר, ובסיום מדרגים.</p></div></div></div>
 <noscript>הלוח דורש JavaScript.</noscript><div id="mk">טוען...</div>
-<script src="/assets/market.js" defer></script>
-''' % FORUM
+<script src="%s" defer></script>
+''' % (FORUM, V("assets/market.js"))
 mk += ffoot()
 write("/market/", mk)
 
@@ -330,4 +338,13 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
 k += foot()
 write("/contact/", k)
 # home written into site/index.html (the helper wrote it to site/index.html via "")
+# the admin page is hand-written: refresh its asset versions too
+_ap = os.path.join(OUT, "admin", "index.html")
+if os.path.exists(_ap):
+    with open(_ap, encoding="utf-8") as _f:
+        _h = _f.read()
+    for _name in ("assets/style.css", "admin/market.js"):
+        _h = re.sub(r'(["\'])/%s(\?v=[0-9a-f]+)?\1' % re.escape(_name), lambda m: m.group(1) + V(_name) + m.group(1), _h)
+    with open(_ap, "w", encoding="utf-8") as _f:
+        _f.write(_h)
 print("pages generated")
