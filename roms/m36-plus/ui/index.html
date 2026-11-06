@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>סריקת עומק: ממשק — M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="סריקת עומק: ממשק — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/ui/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="סריקת עומק: ממשק — M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="סריקת עומק: ממשק — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/ui/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=52a44f66">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / סריקת עומק: ממשק</nav><h2>סריקת עומק: ממשק המשתמש</h2>
+<p class="lead">מיפוי מדויק לצורך הסרה: 1586 שורות הגדרות ב-254 מסכים,
+ו-35 אייקוני שורת סטטוס. מדריך הסרה: <a href="/roms/m36-plus/deps/ui_removal/">כאן</a>.</p>
+<h3>אייקוני שורת הסטטוס (לפי סדר)</h3>
+<p><span class="chip">no_calling</span> <span class="chip">call_strength</span> <span class="chip">alarm_clock</span> <span class="chip">rotate</span> <span class="chip">headset</span> <span class="chip">data_saver</span> <span class="chip">ime</span> <span class="chip">sync_failing</span> <span class="chip">sync_active</span> <span class="chip">nfc</span> <span class="chip">tty</span> <span class="chip">speakerphone</span> <span class="chip">cdma_eri</span> <span class="chip">data_connection</span> <span class="chip">phone_evdo_signal</span> <span class="chip">phone_signal</span> <span class="chip">secure</span> <span class="chip">managed_profile</span> <span class="chip">cast</span> <span class="chip">screen_record</span> <span class="chip">vpn</span> <span class="chip">bluetooth</span> <span class="chip">camera</span> <span class="chip">microphone</span> <span class="chip">location</span> <span class="chip">mute</span> <span class="chip">volume</span> <span class="chip">zen</span> <span class="chip">ethernet</span> <span class="chip">wifi</span> <span class="chip">hotspot</span> <span class="chip">mobile</span> <span class="chip">airplane</span> <span class="chip">battery</span> <span class="chip">sensors_off</span> </p>
+<p class="muted">להסתרת אייקון: <code dir=ltr>settings put secure icon_blacklist "nfc,vpn"</code> (שמות ה-slots מופרדים בפסיק).</p>
+<h3>מתגי שורת הסטטוס ב-SystemUI</h3>
+<table><tr><th>מתג</th><th>ערך</th></tr><tr><td><code dir=ltr>config_materialPreferenceIconSpaceReserved</code></td><td dir=ltr>true</td></tr><tr><td><code dir=ltr>config_severe_battery_dialog</code></td><td dir=ltr>false</td></tr><tr><td><code dir=ltr>config_showBatteryEstimateQSBH</code></td><td dir=ltr>true</td></tr><tr><td><code dir=ltr>config_showLowMediaVolumeIcon</code></td><td dir=ltr>true</td></tr><tr><td><code dir=ltr>config_showNotificationForUnknownBatteryState</code></td><td dir=ltr>false</td></tr><tr><td><code dir=ltr>config_statusBarShowNumber</code></td><td dir=ltr>false</td></tr><tr><td><code dir=ltr>config_vibrateOnIconAnimation</code></td><td dir=ltr>false</td></tr><tr><td><code dir=ltr>settingslib_config_icon_space_reserved</code></td><td dir=ltr>false</td></tr><tr><td><code dir=ltr>config_unblockHwSensorIconEnableTint</code></td><td dir=ltr>true</td></tr></table>
+<h3>מסכי ההגדרות עם הכי הרבה שורות</h3>
+<table><tr><th>מסך (res/xml)</th><th>שורות</th></tr><tr><td><code dir=ltr>development_settings.xml</code></td><td>133</td></tr><tr><td><code dir=ltr>mobile_network_settings.xml</code></td><td>38</td></tr><tr><td><code dir=ltr>app_info_settings.xml</code></td><td>33</td></tr><tr><td><code dir=ltr>enterprise_privacy_settings.xml</code></td><td>25</td></tr><tr><td><code dir=ltr>wifi_network_details_fragment2.xml</code></td><td>25</td></tr><tr><td><code dir=ltr>display_settings.xml</code></td><td>24</td></tr><tr><td><code dir=ltr>sound_settings.xml</code></td><td>24</td></tr><tr><td><code dir=ltr>my_device_info.xml</code></td><td>22</td></tr><tr><td><code dir=ltr>apn_editor.xml</code></td><td>20</td></tr><tr><td><code dir=ltr>configure_notification_settings.xml</code></td><td>20</td></tr><tr><td><code dir=ltr>financed_privacy_settings.xml</code></td><td>18</td></tr><tr><td><code dir=ltr>language_and_input.xml</code></td><td>18</td></tr><tr><td><code dir=ltr>security_advanced_settings.xml</code></td><td>18</td></tr><tr><td><code dir=ltr>security_lockscreen_settings.xml</code></td><td>18</td></tr><tr><td><code dir=ltr>special_access.xml</code></td><td>18</td></tr><tr><td><code dir=ltr>privacy_dashboard_settings.xml</code></td><td>17</td></tr><tr><td><code dir=ltr>app_notification_settings.xml</code></td><td>16</td></tr><tr><td><code dir=ltr>channel_notification_settings.xml</code></td><td>16</td></tr><tr><td><code dir=ltr>accessibility_settings.xml</code></td><td>15</td></tr><tr><td><code dir=ltr>storage_dashboard_fragment.xml</code></td><td>15</td></tr><tr><td><code dir=ltr>top_level_settings.xml</code></td><td>15</td></tr><tr><td><code dir=ltr>all_tether_prefs.xml</code></td><td>14</td></tr><tr><td><code dir=ltr>captioning_appearance.xml</code></td><td>14</td></tr><tr><td><code dir=ltr>hdmi_box_settings.xml</code></td><td>14</td></tr><tr><td><code dir=ltr>network_and_internet.xml</code></td><td>13</td></tr></table></div></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
