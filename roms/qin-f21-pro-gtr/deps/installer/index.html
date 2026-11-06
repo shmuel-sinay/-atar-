@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>תלות: המתקין (PackageInstaller) — Qin F21 Pro | אטלס רומים | כשר טק</title>
+<meta name="description" content="תלות: המתקין (PackageInstaller) — ניתוח טכני של Qin F21 Pro (GTR — הרום הראשון שנותח). חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/qin-f21-pro-gtr/deps/installer/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="תלות: המתקין (PackageInstaller) — Qin F21 Pro | אטלס רומים | כשר טק"><meta property="og:description" content="תלות: המתקין (PackageInstaller) — ניתוח טכני של Qin F21 Pro (GTR — הרום הראשון שנותח). חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/qin-f21-pro-gtr/deps/installer/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=52a44f66">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/qin-f21-pro-gtr/">Qin F21 Pro</a> / <a href="/roms/qin-f21-pro-gtr/deps/">תלויות</a> / תלות: המתקין (PackageInstaller)</nav><article><h2>תלות: המתקין (PackageInstaller)</h2>
+<blockquote class="muted">קוד מפורק מתוך <code>system/framework/services.jar</code> של הרום הזה (androguard).</blockquote>
+<blockquote class="muted">חבילה ברום: <code>com.android.packageinstaller</code> – <code>/system/priv-app/PackageInstaller/PackageInstaller.apk</code></blockquote>
+<h3>למה מחיקה שלו מפילה את האתחול</h3>
+<p><code>PackageManagerService.&lt;init&gt;</code> – הבנאי של מנהל החבילות, שרץ מוקדם מאוד ב-<code>SystemServer.startBootstrapServices</code> – קורא:</p>
+<pre><code>mRequiredInstallerPackage   = getRequiredInstallerLPr();
+mRequiredUninstallerPackage = getRequiredUninstallerLPr();</code></pre>
+<h4><code>getRequiredInstallerLPr()</code> (כפי שהוא ברום)</h4>
+<pre><code>Intent i = new Intent(&quot;android.intent.action.INSTALL_PACKAGE&quot;);
+i.addCategory(&quot;android.intent.category.DEFAULT&quot;);
+i.setDataAndType(Uri.parse(&quot;content://com.example/foo.apk&quot;),
+                 &quot;application/vnd.android.package-archive&quot;);
+List matches = queryIntentActivitiesInternal(i, MIME, 0x1C0000 /*MATCH_SYSTEM_ONLY|DIRECT_BOOT_*/, 0);
+if (matches.size() != 1)
+    throw new RuntimeException(&quot;There must be exactly one installer; found &quot; + matches);
+if (!matches.get(0).activityInfo.applicationInfo.isPrivilegedApp())
+    throw new RuntimeException(&quot;The installer must be a privileged app&quot;);
+return matches.get(0).getComponentInfo().packageName;</code></pre>
+<h4><code>getRequiredUninstallerLPr()</code></h4>
+<pre><code>Intent i = new Intent(&quot;android.intent.action.UNINSTALL_PACKAGE&quot;);
+i.setData(Uri.fromParts(&quot;package&quot;, &quot;foo.bar&quot;, null));
+ResolveInfo r = resolveIntent(i, null, 0x1C0000, 0);
+if (r == null || mResolveActivity.name.equals(r.getComponentInfo().name))
+    throw new RuntimeException(&quot;There must be exactly one uninstaller; found &quot; + r);
+return r.getComponentInfo().packageName;</code></pre>
+<h4>מה בדיוק נבדק – 4 תנאים</h4>
+<p>1. קיימת <b>בדיוק אחת</b> פעילות מערכת שמגיבה ל-<code>INSTALL_PACKAGE</code> עם <code>content://</code> ו-MIME של APK.</p>
+<p>   – אפס <b>או שתיים</b> = קריסה. (התקנת מתקין נוסף כאפליקציית מערכת עם אותו intent-filter תפיל גם היא!)</p>
+<p>2. האפליקציה הזו חייבת להיות <b>priv-app</b> (בתיקיית <code>priv-app</code>).</p>
+<p>3. קיימת פעילות שמגיבה ל-<code>UNINSTALL_PACKAGE</code> עם <code>package:</code>.</p>
+<p>4. התשובה ל-(3) לא יכולה להיות מסך &quot;בחר אפליקציה&quot; (<code>ResolverActivity</code>) – כלומר שוב: בדיוק אחת.</p>
+<p><code>RuntimeException</code> בבנאי של PackageManagerService ← <code>system_server</code> קורס ← zygote מאתחל אותו ← אותה קריסה ← <b>לולאת אתחול</b> (אנימציית האתחול לא נגמרת).</p>
+<h3>מי משתמש בתוצאה (אם נבטל את הבדיקה)</h3>
+<p>נבדק בהצלבה על כל <code>services.jar</code> – כל מי שקורא את השדות:</p>
+<table><tr><th>שדה</th><th>נקרא ב-</th><th>האם בטוח ל-<code>null</code></th></tr>
+<tr><td><code>mRequiredInstallerPackage</code></td><td><code>getPackageInstallerPackageName()</code></td><td>מחזיר <code>null</code></td></tr>
+<tr><td></td><td><code>canSuspendPackageForUserInternal</code></td><td>כן – <code>name.equals(null)</code> מחזיר false</td></tr>
+<tr><td></td><td><code>handlePackagePostInstall</code></td><td>כן – יש בדיקת <code>!= null</code> לפני שליחת broadcast</td></tr>
+<tr><td><code>getPackageInstallerPackageName()</code></td><td><code>PackageInstallerSession.makeSessionActiveLocked</code></td><td>לא קורס: <code>intent.setPackage(null)</code>. אבל בקשת &quot;אישור התקנה&quot; לא תמצא מי שיציג אותה</td></tr>
+<tr><td><code>mRequiredUninstallerPackage</code></td><td><code>canSuspendPackageForUserInternal</code></td><td>כן</td></tr>
+<tr><td></td><td><code>isCallerAllowedToSilentlyUninstall</code></td><td>כן – בדיקת <code>!= null</code></td></tr>
+</table>
+<h3>מסקנה – איך מבטלים את התלות</h3>
+<p><b>שינוי מינימלי:</b> ב-<code>services.jar</code>, לגרום ל-<code>getRequiredInstallerLPr</code> ול-<code>getRequiredUninstallerLPr</code> להחזיר <code>null</code> במקום לזרוק.</p>
+<p>לפי הניתוח למעלה, אף קורא בתוך system_server לא ייפול על <code>null</code>.</p>
+<p><b>מה יפסיק לעבוד:</b></p>
+<ul>
+<li>התקנה מתוך אפליקציות (קובץ APK שנפתח מקבצים/דפדפן) – אין מי שיציג את מסך האישור.</li>
+<li>הסרת אפליקציה דרך ממשק &quot;הסר&quot;.</li>
+</ul>
+<p><b>מה ימשיך לעבוד:</b> <code>adb install</code> / <code>pm install</code> (לא דורשים אישור משתמש), עדכונים שקטים של אפליקציות מערכת.</p>
+<p><b>חשוב לביצוע בפועל:</b></p>
+<ul>
+<li><code>services.jar</code> מגיע עם קבצי AOT מוכנים: <code>framework/oat/arm64/services.odex</code>, <code>services.vdex</code>, <code>services.art</code>.</li>
+</ul>
+<p>  אם משנים את ה-jar ולא מוחקים אותם – ART עלול לדחות אותם ולהריץ מה-jar, או (אם ה-checksum לא נבדק כמצופה) להמשיך להריץ את הקוד הישן. הדרך הבטוחה: למחוק את שלושתם אחרי השינוי.</p>
+<ul>
+<li>ברום זה האימות כבוי (ראה <code>BOOT_CHAIN.md</code>), כך ששינוי ב-system לא ייחסם על ידי dm-verity.</li>
+</ul>
+<h3>רמת ביטחון</h3>
+<ul>
+<li>הקוד: <b>ודאי</b> – נלקח ישירות מהרום.</li>
+<li>רשימת הקוראים: <b>גבוהה</b> – הצלבה סטטית; קריאה דרך reflection לא הייתה מתגלה.</li>
+<li>ההשפעה בזמן ריצה: <b>תיאורטית</b> – לא נבדקה על מכשיר.</li>
+</ul></article></div></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>

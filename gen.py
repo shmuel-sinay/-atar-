@@ -27,11 +27,12 @@ def V(path):
     except OSError:
         return path
 
-NAV = [("/", "בית"), ("/services/", "שירותים"), ("/players/", "הכשרת נגנים"), ("/shop/", "חנות"),
-       ("/contact/", "צור קשר")]
+NAV = [("/", "בית"), ("/services/", "שירותים"), ("/players/", "הכשרת נגנים"),
+       ("/roms/", "למפתחים: אטלס רומים"), ("/shop/", "חנות"), ("/contact/", "צור קשר")]
 
-def head(title, desc, path):
+def head(title, desc, path, extra_css=None):
     nav = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == path else "", t) for h, t in NAV)
+    extra = ('<link rel="stylesheet" href="%s">' % V(extra_css)) if extra_css else ""
     return f'''<!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -50,6 +51,7 @@ def head(title, desc, path):
 <link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
 <link rel="apple-touch-icon" href="/assets/logo-180.png">
 <link rel="stylesheet" href="{V("assets/style.css")}">
+{extra}
 </head>
 <body>
 <header class="site"><div class="wrap">
@@ -643,6 +645,160 @@ k += f'''<section class="pagehead"><div class="wrap"><h1>צור קשר</h1><p>ה
 '''
 k += foot()
 write("/contact/", k)
+
+# ---------- ROMS ATLAS (developer area: Android ROM/firmware documentation) ----------
+import json as _json
+
+ROM_ORDER = ["m36-plus", "f22-pro-a13", "f22-pro-unlocked-gtr", "qin-f21-pro-gtr",
+             "f21-pro-gapps", "f21-pro-aiv-kosher", "f21-pro-a13-aiv",
+             "f21-pro-los18", "f21-pro-los20", "tiq-m5-stock"]
+DEVICE_META = {
+ "m36-plus": {"name": "M36 Plus", "blurb": "רום מקורי — סריקת עומק"},
+ "f22-pro-a13": {"name": "Qin F22 Pro", "blurb": "רום מקורי — סריקת עומק"},
+ "f21-pro-a13-aiv": {"name": "Qin F21 Pro", "blurb": "AOSP 13 בטא (AIV)"},
+ "f21-pro-aiv-kosher": {"name": "Qin F21 Pro", "blurb": "A.I.V — גרסה כשרה"},
+ "tiq-m5-stock": {"name": "Tiq M5", "blurb": "רום מקורי"},
+ "f21-pro-los18": {"name": "Qin F21 Pro", "blurb": "LineageOS 18.1 (GTR)"},
+ "f22-pro-unlocked-gtr": {"name": "Qin F22 Pro", "blurb": "unlocked GTR"},
+ "f21-pro-los20": {"name": "Qin F21 Pro", "blurb": "LineageOS 20"},
+ "f21-pro-gapps": {"name": "Qin F21 Pro", "blurb": "gapps super (stock+GApps)"},
+ "qin-f21-pro-gtr": {"name": "Qin F21 Pro", "blurb": "GTR — הרום הראשון שנותח"},
+}
+ROMS_REPO = "https://github.com/shmuel-sinay/ANDROID"
+
+_VARMAP = [("var(--ac2)", "var(--gold)"), ("var(--ac)", "var(--green)"),
+           ("var(--mut)", "var(--ink-soft)"), ("var(--fg)", "var(--ink)"),
+           ("var(--bg2)", "var(--bg)"), ("var(--br)", "var(--line)"),
+           ("var(--card2)", "var(--atlas-card2)"), ("var(--chip)", "var(--atlas-chip)"),
+           ("var(--ok)", "var(--atlas-ok)"), ("var(--warn)", "var(--atlas-warn)"),
+           ("var(--bad)", "var(--atlas-bad)"), ("var(--grad)", "var(--atlas-grad)")]
+_EXTERNAL_RE = re.compile(r'^(https?:)?//|^mailto:|^tel:|^#|^javascript:')
+
+
+def _resolve_href(route, href):
+    if _EXTERNAL_RE.match(href):
+        return None
+    cur_dir = "" if route == "" else (route.rsplit("/", 1)[0] if "/" in route else route)
+    h = href
+    while h.startswith("../"):
+        h = h[3:]
+        cur_dir = ""
+    combined = h if cur_dir == "" else cur_dir + "/" + h
+    if combined.endswith("/index.html"):
+        return combined[:-len("/index.html")]
+    if combined == "index.html":
+        return ""
+    if combined.endswith(".html"):
+        return combined[:-5]
+    return combined
+
+
+def _rewrite_body(body, slug, route):
+    for a, b in _VARMAP:
+        body = body.replace(a, b)
+
+    def _sub(m):
+        t = _resolve_href(route, m.group(1))
+        if t is None:
+            return m.group(0)
+        return 'href="/roms/%s/%s"' % (slug, (t + "/") if t else "")
+    return re.sub(r'href="([^"]+)"', _sub, body)
+
+
+def _rom_crumbs(slug, dname, route, routes):
+    items = [("אטלס רומים", "/roms/")]
+    if route == "":
+        items.append((dname, None))
+    else:
+        items.append((dname, "/roms/%s/" % slug))
+        parts, prefix = route.split("/"), ""
+        for i, p in enumerate(parts):
+            prefix = p if not prefix else prefix + "/" + p
+            title = routes.get(prefix, {}).get("title", p)
+            items.append((title, None if i == len(parts) - 1 else "/roms/%s/%s/" % (slug, prefix)))
+    return " / ".join('<a href="%s">%s</a>' % (h, html.escape(t)) if h else html.escape(t) for t, h in items)
+
+
+_roms = {}
+for _slug in ROM_ORDER:
+    _p = os.path.join("roms-data", _slug + ".json")
+    if os.path.exists(_p):
+        with open(_p, encoding="utf-8") as _f:
+            _roms[_slug] = _json.load(_f)
+
+# ---- hub: /roms/ ----
+_devcards = ""
+for _slug in ROM_ORDER:
+    _m = _roms.get(_slug)
+    if not _m:
+        continue
+    _meta = DEVICE_META[_slug]
+    _d = _m["device"]
+    _devcards += ('<a class="devcard" href="/roms/%s/"><b>%s</b> — %s<br>'
+                  '<span class="muted">אנדרואיד %s · %s אפליקציות · %s בדיקות אתחול</span></a>'
+                  % (_slug, html.escape(_meta["name"]), html.escape(_meta["blurb"]),
+                     html.escape(_d.get("android_version", "")), _d.get("apk_count", 0),
+                     _d.get("boot_guard_count", 0)))
+
+_hub = head("אטלס רומים לאנדרואיד: תיעוד למפתחים | כשר טק",
+            "תיעוד טכני פתוח ל-10 רומים וקושחות לאנדרואיד: שרשרת אתחול ואימות, כל אפליקציה ותלות, "
+            "מה אפשר להסיר בבטחה ומה יפיל את המכשיר ללולאת אתחול. נוצר אוטומטית מניתוח הקבצים עצמם.",
+            "/roms/", extra_css="roms/atlas.css")
+_hub += '''<section class="pagehead"><div class="wrap"><h1>אטלס רומים לאנדרואיד</h1>
+<p>אזור למפתחים: תיעוד רומים וקושחות לאנדרואיד. לא שירות או מוצר של כשר טק — מחקר טכני פתוח.</p></div></section>
+<section class="block"><div class="wrap"><div class="atlas">
+<div class="devbadge">◆ אזור למפתחים — תיעוד טכני, לא שירות לקוחות</div>
+<p class="lead">לכל רום: מפת מחיצות ושרשרת אתחול, כל אפליקציה והרשאותיה, כל בדיקת "חובה" בקוד שעלולה
+להפיל אתחול, וגרף תלויות (ספריות, HAL, SELinux). לכל רכיב — האם ומה אפשר להסיר בבטחה.
+תיעוד תיאורטי מניתוח סטטי, לא נבדק על מכשיר. קוד המקור והכלים: <a href="''' + ROMS_REPO + '''">github.com/shmuel-sinay/ANDROID</a>.</p>
+<h2>המכשירים</h2>
+<div class="devgrid">''' + _devcards + '''</div>
+</div></div></section>
+'''
+_hub += foot()
+write("/roms/", _hub)
+
+# ---- per device: /roms/<slug>/ and every sub-route ----
+_sitemap_extra = []
+for _slug, _m in _roms.items():
+    _meta = DEVICE_META[_slug]
+    _dname = _meta["name"]
+    _d = _m["device"]
+    _routes = _m["routes"]
+    for _route, _frag in _routes.items():
+        _content = _rewrite_body(_frag["body"], _slug, _route)
+        _crumbs = _rom_crumbs(_slug, _dname, _route, _routes)
+        if _route == "":
+            _title = "%s — %s: תיעוד הרום | אטלס רומים | כשר טק" % (_dname, _meta["blurb"])
+            _desc = ("תיעוד מלא ל-%s (%s): אנדרואיד %s, %s אפליקציות, %s בדיקות אתחול. "
+                     "שרשרת אתחול, תלויות ומרשמי הסרה." % (
+                         _dname, _meta["blurb"], _d.get("android_version", ""),
+                         _d.get("apk_count", 0), _d.get("boot_guard_count", 0)))
+            _content = '<div class="devbadge">◆ אזור למפתחים — תיעוד טכני</div>' + _content
+            _path = "/roms/%s/" % _slug
+        else:
+            _title = "%s — %s | אטלס רומים | כשר טק" % (_frag["title"], _dname)
+            _desc = "%s — ניתוח טכני של %s (%s). חלק מאטלס הרומים של כשר טק." % (
+                _frag["title"], _dname, _meta["blurb"])
+            _path = "/roms/%s/%s/" % (_slug, _route)
+        _page = head(_title, _desc, _path, extra_css="roms/atlas.css")
+        _page += '<div class="atlas"><nav class="crumbs">%s</nav>%s</div>' % (_crumbs, _content)
+        _page += foot()
+        write(_path, _page)
+        _sitemap_extra.append(_path)
+
+# ---------- ROMS sitemap entries ----------
+_sm_path = os.path.join(OUT, "sitemap.xml")
+with open(_sm_path, encoding="utf-8") as _f:
+    _sm = _f.read()
+if "/roms/" not in _sm:
+    _urls = "".join("<url><loc>https://kosher-tek.com%s</loc></url>\n" % p
+                    for p in ["/roms/"] + sorted(_sitemap_extra))
+    _sm = _sm.replace("</urlset>", _urls + "</urlset>")
+    with open(_sm_path, "w", encoding="utf-8") as _f:
+        _f.write(_sm)
+print("roms atlas: %d devices, %d pages" % (len(_roms), len(_sitemap_extra) + 1))
+
 # home written into site/index.html (the helper wrote it to site/index.html via "")
 # the admin page is hand-written: refresh its asset versions too
 _ap = os.path.join(OUT, "admin", "index.html")

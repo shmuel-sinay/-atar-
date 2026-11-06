@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>תלות: ספק ההגדרות (SettingsProvider) — Qin F21 Pro | אטלס רומים | כשר טק</title>
+<meta name="description" content="תלות: ספק ההגדרות (SettingsProvider) — ניתוח טכני של Qin F21 Pro (GTR — הרום הראשון שנותח). חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/qin-f21-pro-gtr/deps/settings_provider/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="תלות: ספק ההגדרות (SettingsProvider) — Qin F21 Pro | אטלס רומים | כשר טק"><meta property="og:description" content="תלות: ספק ההגדרות (SettingsProvider) — ניתוח טכני של Qin F21 Pro (GTR — הרום הראשון שנותח). חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/qin-f21-pro-gtr/deps/settings_provider/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=52a44f66">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/qin-f21-pro-gtr/">Qin F21 Pro</a> / <a href="/roms/qin-f21-pro-gtr/deps/">תלויות</a> / תלות: ספק ההגדרות (SettingsProvider)</nav><article><h2>תלות: ספק ההגדרות (SettingsProvider)</h2>
+<blockquote class="muted">קוד מפורק מתוך <code>services.jar</code> ו-<code>framework.jar</code> של הרום הזה.</blockquote>
+<blockquote class="muted">חבילה ברום: <code>com.android.providers.settings</code> (authority: <code>settings</code>), רצה בתהליך <code>system</code> עם <code>sharedUserId=android.uid.system</code>.</blockquote>
+<h3>סוג התלות: עקיפה (קריסת NullPointerException, לא בדיקה מפורשת)</h3>
+<p>אין בקוד שורה שאומרת &quot;SettingsProvider חובה&quot;. הקריסה נובעת מכך שקוד המערכת <b>מניח</b> שהוא קיים.</p>
+<h3>השרשרת</h3>
+<h4>1. <code>ActivityManagerService.installSystemProviders()</code></h4>
+<p>נקרא מ-<code>SystemServer.startOtherServices()</code>, מוקדם באתחול:</p>
+<pre><code>List providers = generateApplicationProvidersLocked(processNames.get(&quot;system&quot;, 1000));
+// מסנן ספקים שאינם אפליקציית מערכת
+mSystemThread.installSystemProviders(providers);   // מתקין את ספקי התהליך &quot;system&quot;
+mSystemProvidersInstalled = true;
+mConstants.start(mContext.getContentResolver());   // ← קורא הגדרות מיד
+mCoreSettingsObserver = new CoreSettingsObserver(this);
+mActivityTaskManager.installSystemProviders();
+mDevelopmentSettingsObserver = new DevelopmentSettingsObserver(this);
+SettingsToPropertiesMapper.start(resolver);
+mOomAdjuster.initSettings();
+RescueParty.onSettingsProviderPublished(mContext);</code></pre>
+<p>רק ספקים של אפליקציות שרצות <b>בתהליך <code>system</code></b> מותקנים כאן. SettingsProvider הוא כזה.</p>
+<p>אם הוא נמחק – הרשימה פשוט לא כוללת אותו, ואין שגיאה <b>בשלב הזה</b>.</p>
+<h4>2. כל קריאה ל-<code>Settings.Global/Secure/System.get*()</code></h4>
+<p><code>android.provider.Settings$NameValueCache.getStringForUser()</code> (framework.jar):</p>
+<pre><code>IContentProvider cp = mProviderHolder.getProvider(cr);   // acquireProvider(&quot;settings&quot;) → null
+...
+Bundle b = cp.call(pkg, tag, authority, mCallGetCommand, name, args);  // ← אין בדיקת null</code></pre>
+<p><code>ContentProviderHolder.getProvider()</code> מחזיר את מה ש-<code>acquireProvider(&quot;settings&quot;)</code> החזיר – <code>null</code> כשהספק לא קיים.</p>
+<p>הקריאה <code>cp.call(...)</code> על <code>null</code> זורקת <code>NullPointerException</code>. בלוקי ה-catch שם תופסים רק <code>RemoteException</code>.</p>
+<h4>3. התוצאה</h4>
+<p><code>mConstants.start()</code> / <code>CoreSettingsObserver</code> קוראים הגדרות ← NPE בתוך system_server ← קריסה ← zygote מאתחל ← <b>לולאת אתחול</b>.</p>
+<h3>האם אפשר לבטל?</h3>
+<p><b>לא בקלות.</b> עשרות שירותים קוראים הגדרות (ActivityManager, WindowManager, PowerManager, Wi-Fi, ...).</p>
+<p>ביטול התלות ידרוש מימוש חלופי של ספק <code>settings</code> – כלומר, להחזיר אותו בצורה אחרת. המסקנה המעשית: <b>לא למחוק</b>.</p>
+<h3>אפליקציות שתלויות בו גם כן</h3>
+<p>כל אפליקציה שקוראת <code>Settings.*</code> – כלומר כמעט כולן. בלעדיו גם הן יקרסו.</p>
+<h3>רמת ביטחון</h3>
+<ul>
+<li>השרשרת והקוד: <b>ודאי</b> (מהרום).</li>
+<li>ההנחה ש-<code>acquireProvider</code> מחזיר null לספק שאינו קיים: <b>גבוהה</b> (התנהגות AOSP מתועדת).</li>
+<li>לא נבדק על מכשיר.</li>
+</ul></article></div></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
