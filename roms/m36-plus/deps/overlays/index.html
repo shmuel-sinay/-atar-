@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מדריך: הוספה והסרה של תכונות דרך Overlay (RRO) — M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="מדריך: הוספה והסרה של תכונות דרך Overlay (RRO) — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/overlays/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="מדריך: הוספה והסרה של תכונות דרך Overlay (RRO) — M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="מדריך: הוספה והסרה של תכונות דרך Overlay (RRO) — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/overlays/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=52a44f66">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / מדריך: הוספה והסרה של תכונות דרך Overlay (RRO)</nav><article><h2>מדריך: הוספה והסרה של תכונות דרך Overlay (RRO)</h2>
+<blockquote class="muted">שיטה לשינוי התנהגות המערכת <b>בלי לפרק ולחתום מחדש APK</b> — דריסת ערכי משאבים.</blockquote>
+<blockquote class="muted">חל על M36 Plus (אנדרואיד 13, MT6765). האימות (AVB) פעיל ברום הזה — ראו <code>BOOT_CHAIN.md</code>.</blockquote>
+<h3>העיקרון</h3>
+<p>כמעט כל תכונה במערכת נשלטת ע&quot;י <b>משאב</b> (resource): ערך <code>bool</code>, <code>integer</code>, <code>string</code> או <code>array</code>.</p>
+<p>במקום לשנות את האפליקציה עצמה, בונים <b>Runtime Resource Overlay (RRO)</b> — חבילת APK קטנה שרק</p>
+<p>*דורסת* את הערך. המערכת טוענת אותה מעל האפליקציה המקורית.</p>
+<p>הסריקה העמוקה מצאה <b>11,808 מתגים כאלה</b> ב-202 האפליקציות (ראו עמוד &quot;מתגי תצורה&quot; באתר, או <code>resources.json</code>).</p>
+<h3>איך בונים overlay (שלד)</h3>
+<pre><code>&lt;!-- AndroidManifest.xml --&gt;
+&lt;manifest xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    package=&quot;com.example.myoverlay&quot;&gt;
+  &lt;overlay android:targetPackage=&quot;com.android.systemui&quot;
+           android:isStatic=&quot;true&quot; android:priority=&quot;1&quot;/&gt;
+  &lt;application android:hasCode=&quot;false&quot;/&gt;
+&lt;/manifest&gt;</code></pre>
+<pre><code>&lt;!-- res/values/config.xml : הערך הדורס --&gt;
+&lt;resources&gt;
+  &lt;bool name=&quot;config_showBatteryPercentOnStatusBar&quot;&gt;false&lt;/bool&gt;
+&lt;/resources&gt;</code></pre>
+<p>בונים, חותמים (מפתח platform לא חובה ל-RRO סטטי), ומניחים ב-<code>/product/overlay/</code>.</p>
+<p>האימות פעיל, אז מניחים ב-partition שנכלל ב-vbmeta המתאים, או מכבים אימות קודם.</p>
+<h3>דוגמה 1: הסרת אייקון משורת הסטטוס</h3>
+<ul>
+<li>סדר האייקונים מוגדר ב-<code>framework-res</code> במערך <code>config_statusBarIcons</code> (שמות &quot;slot&quot;).</li>
+<li>SystemUI חושף <b>109 מתגים</b> הקשורים לשורת הסטטוס (ראו <code>ui_knobs.json</code>), למשל:</li>
+<li><code>config_showBatteryPercentOnStatusBar</code> — אחוז סוללה.</li>
+<li><code>config_statusBarShowNumber</code> — מספר על אייקון.</li>
+<li><b>להסרת אייקון מסוים:</b> דורסים ב-overlay של <code>com.android.systemui</code> את ה-string שמגדיר את ה-slot ל-ריק, או מכבים את ה-<code>bool</code> המתאים. אם אין מתג ייעודי — דורסים את <code>config_statusBarIcons</code> עצמו ומסירים את ה-slot מהרשימה.</li>
+</ul>
+<h3>דוגמה 2: הסרת שורה ממסך ההגדרות</h3>
+<ul>
+<li><code>com.android.settings</code> חושף <b>734 מתגים</b>.</li>
+<li>כל מסך הגדרות בנוי מ-<code>PreferenceScreen</code> ב-XML תחת <code>res/xml/</code> (למשל <code>network_and_internet.xml</code>).</li>
+<li>שורה מוסתרת ע&quot;י:</li>
+</ul>
+<p>  1. דריסת ה-<code>bool</code> של אותה שורה (רבות מוגנות ב-<code>config_show&lt;Feature&gt;</code> או <code>config_&lt;feature&gt;_available</code>), או</p>
+<p>  2. הסרת ה-feature מ-<code>framework-res</code> / sysconfig (אם השורה תלויה ב-system feature — ראו <code>apks.json</code> → uses-feature), או</p>
+<p>  3. overlay שמחליף את קובץ ה-<code>res/xml/</code> של המסך.</p>
+<h3>איך למצוא את המתג הנכון</h3>
+<p>1. פותחים את העמוד &quot;מתגי תצורה&quot; באתר, מחפשים את החבילה.</p>
+<p>2. או ב-<code>resources.json</code>: <code>apks[&lt;path&gt;].knobs</code> — שם המתג, הסוג, והערך הנוכחי.</p>
+<p>3. מצליבים עם <code>apks.json</code> (uses-feature, uses-library) כדי לוודא שאין תלות נוספת.</p>
+<h3>רמת ביטחון</h3>
+<ul>
+<li>רשימת המתגים וערכיהם: <b>ודאי</b> (נשלף מה-APK עצמו ב-aapt).</li>
+<li>איזה מתג שולט בדיוק באיזו שורה/אייקון: <b>דורש אימות</b> — חלק מהשמות מפורשים, חלק דורשים קריאת הקוד של האפליקציה.</li>
+<li>לא נבדק על מכשיר.</li>
+</ul></article></div></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>

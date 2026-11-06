@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הקשחת רום כשר ל-M36 Plus — מה באמת עובד — M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="הקשחת רום כשר ל-M36 Plus — מה באמת עובד — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/kosher_hardening/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="הקשחת רום כשר ל-M36 Plus — מה באמת עובד — M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="הקשחת רום כשר ל-M36 Plus — מה באמת עובד — ניתוח טכני של M36 Plus (רום מקורי — סריקת עומק). חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/kosher_hardening/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=52a44f66">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / הקשחת רום כשר ל-M36 Plus — מה באמת עובד</nav><article><h2>הקשחת רום כשר ל-M36 Plus — מה באמת עובד</h2>
+<blockquote class="muted">מטרה: מכשיר נטול-אינטרנט לילדים, עמיד ככל האפשר בפני שחזור מזדמן.</blockquote>
+<blockquote class="muted">דירוג כן לפי אפקטיביות. M36 = MediaTek MT6765, אנדרואיד 13.</blockquote>
+<h3>עיקרון שחייבים להפנים</h3>
+<p>אין שום קובץ או דרייבר למחוק שימנע כניסה לצריבה — מצב ההורדה יושב ב-<b>BROM שבתוך השבב</b>,</p>
+<p>לא בדיסק. לכן ההגנה היא לא &quot;לחסום צריבה&quot; (בלתי אפשרי ומסוכן) אלא <b>להעלות את רף הידע/הכלים</b></p>
+<p>שנדרש כדי להחזיר אינטרנט, ולוודא שצריבה מזדמנת (Download Only בלי format) לא מספיקה.</p>
+<h3>דירוג האמצעים</h3>
+<h4>1. להסיר את האינטרנט ברמת super, לא ברמת אפליקציה ⭐⭐⭐</h4>
+<p>אם מסירים רק אפליקציית דפדפן — קל להחזיר. במקום זה, ברום שאתה שואב:</p>
+<ul>
+<li>מסיר/חוסם את רכיבי הרשת ב-<code>system</code>/<code>product</code> (ראו <code>removal_recipes.json</code> ו-<code>apks.json</code>).</li>
+<li>כך הגיבוי שאתה צורב כבר &quot;נקי&quot; מהבסיס, ולא תלוי בשכבת הסתרה.</li>
+</ul>
+<h4>2. נעילת bootloader מחדש (relock) ⭐⭐⭐</h4>
+<p>אחרי הצריבה: <code>fastboot flashing lock</code> (אם המכשיר תומך).</p>
+<ul>
+<li><b>חוסם:</b> צריבה/עליית רום קאסטום או &quot;זר&quot; שלא חתום במפתח של הרום.</li>
+<li><b>לא חוסם:</b> צריבה חוזרת של אותו רום מקורי חתום (זה המגבלה — ראו למטה).</li>
+<li>עם AVB פעיל (ברום הזה הוא פעיל — ראו <code>BOOT_CHAIN.md</code>), מכשיר נעול יסרב לעלות עם vbmeta/boot שלא תואמים.</li>
+</ul>
+<h4>3. לנצל את &quot;Download Only בלי format&quot; לטובתך ⭐⭐</h4>
+<p>רוב המשתמשים צורבים בלי format. בצריבה כזו מחיצה שלא ברשימה נשמרת.</p>
+<ul>
+<li><b>המשמעות:</b> אם ההגדרה הכשרה שלך יושבת ב-<code>userdata</code> (למשל דרך <code>settings put ...</code>), היא שורדת</li>
+</ul>
+<p>  צריבה של super. אבל זו הגנה חלשה — מי שעושה Format and Download דורס הכל.</p>
+<ul>
+<li>לכן: אל תסתמך על זה כהגנה ראשית, רק כשכבה.</li>
+</ul>
+<h4>4. הסרת הגדרות/כניסות שמובילות לרשת ⭐⭐</h4>
+<p>מתוך מיפוי ההגדרות (<code>ui_deep.json</code>, 1,586 שורות): להסיר/לנטרל דרך overlay את השורות שמפעילות</p>
+<p>Wi‑Fi, נתונים, hotspot, APN. גם אם מישהו מחזיר רכיב, בלי המסכים קשה יותר להפעיל.</p>
+<h3>המגבלה הכנה (חשוב לדעת מראש)</h3>
+<ul>
+<li><b>רום מקורי של אותו דגם מהרשת כן חתום נכון</b> → הוא יעלה גם על מכשיר נעול. נעילה חוסמת רומים</li>
+</ul>
+<p>  זרים, לא את המקורי. מול מישהו עם מחשב, כבל, והרום הנכון — אין אטימה מלאה. זו מגבלת חומרה.</p>
+<ul>
+<li><b>לכן לא כדאי:</b> לנסות להשחית preloader / לשרוף eFuse / &quot;לחסום BROM&quot;. זה:</li>
+</ul>
+<p>  1. לרוב לא עובד (BROM בסיליקון), ו-</p>
+<p>  2. מסתכן ב<b>בריק קבוע ובלתי הפיך</b> — על הרבה מכשירי ילדים זה אסון בלי דרך חזרה, כולל אובדן</p>
+<p>     היכולת שלך-עצמך לתקן.</p>
+<h3>ההמלצה המעשית</h3>
+<p>1. בנה רום-בסיס כשר נקי (הסרה ברמת super), לא שכבת הסתרה.</p>
+<p>2. נעל bootloader מחדש אחרי הצריבה.</p>
+<p>3. קבל שהמטרה הריאלית היא &quot;רף גבוה למזדמן&quot;, לא &quot;אטום לחלוטין&quot;.</p>
+<p>4. אל תיגע ב-preloader/eFuse — הרווח אפסי והסיכון הוא מכשירים מתים.</p></article></div></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
