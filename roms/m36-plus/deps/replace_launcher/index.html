@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>החלפת ה-launcher לגמרי (M36 Plus), M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="החלפת ה-launcher לגמרי (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/replace_launcher/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="החלפת ה-launcher לגמרי (M36 Plus), M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="החלפת ה-launcher לגמרי (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/replace_launcher/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=66043de6">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<section class="pagehead"><div class="wrap"><h1>החלפת ה-launcher לגמרי (M36 Plus)</h1><p>M36 Plus, רום מקורי, סריקת עומק</p></div></section><section class="block"><div class="wrap"><div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / החלפת ה-launcher לגמרי (M36 Plus)</nav><article><h2 class="title">החלפת ה-launcher לגמרי (M36 Plus)</h2>
+<h3>מה רץ היום</h3>
+<p><code>com.android.launcher3</code> (בפועל: <code>MtkLauncher3QuickStep</code>), בנתיב</p>
+<p><code>/system/system_ext/priv-app/MtkLauncher3QuickStep/MtkLauncher3QuickStep.apk</code>.</p>
+<p>הפעילות שרשומה כ-HOME: <code>com.android.launcher3.uioverrides.QuickstepLauncher</code>.</p>
+<h3>בדיקת בטיחות: האם מותר למחוק אותו?</h3>
+<p>מתוך <code>removal_recipes.json</code>: <b>סיכון <code>degraded</code>, לא <code>bootloop</code></b>. שום בדיקת אתחול</p>
+<p>(boot_guards) לא תלויה בו, ושום אפליקציה לא חולקת איתו sharedUserId. המקור היחיד</p>
+<p>שתלוי בקיום launcher הוא <code>ActivityTaskManager.startHomeActivity()</code>: אם אין אף</p>
+<p>אפליקציה שמוכרת כ-HOME, המערכת עולה תקין אבל נשאר מסך שחור אחרי אנימציית האתחול.</p>
+<p><b>כלומר: זה בטוח להחליף, לא רק למחוק.</b></p>
+<h3>מי עוד מתחרה על להיות ה-launcher</h3>
+<p>בדקתי את כל 202 האפליקציות: רק 6 פעילויות ברום מצהירות על <code>category HOME</code>. חמש</p>
+<p>מהן הן מסכים זמניים/מיוחדים, לא launcher אמיתי:</p>
+<table><tr><th>חבילה</th><th>פעילות</th><th>מתי היא רלוונטית בפועל</th></tr>
+<tr><td><code>com.android.launcher3</code></td><td>QuickstepLauncher</td><td><b>זה ה-launcher האמיתי</b></td></tr>
+<tr><td><code>com.android.settings</code></td><td>FallbackHome</td><td>רק אם *אין בכלל* launcher מותקן, רשת ביטחון של אנדרואיד</td></tr>
+<tr><td><code>com.android.provision</code></td><td>DefaultActivity</td><td>רק לפני שהגדרת המכשיר (setup wizard) הושלמה</td></tr>
+<tr><td><code>com.android.managedprovisioning</code></td><td>PostEncryptionActivity</td><td>רק מיד אחרי הצפנה ראשונית</td></tr>
+<tr><td><code>com.google.android.apps.restore</code></td><td>StubLauncherActivity</td><td>רק בזמן שחזור נתונים מפיקסל</td></tr>
+<tr><td><code>android</code> (framework)</td><td>SystemUserHomeActivity</td><td>מצב משתמשי-מערכת מיוחד, לא רלוונטי כאן</td></tr>
+</table>
+<p><b>המשמעות:</b> אם מתקינים launcher חדש ומסירים את <code>MtkLauncher3QuickStep</code>, הוא</p>
+<p>יהיה <b>היחיד</b> בפועל ביום-יום, בלי תיבת-בחירה (chooser) שתציק למשתמש.</p>
+<h3>איך מחליפים, בפועל</h3>
+<p>1. <b>להסיר</b> את <code>MtkLauncher3QuickStep.apk</code> מ-<code>system_ext/priv-app/</code> (או רק</p>
+<p>   להשבית את ה-component שלו דרך overlay, אם רוצים לשמור אותו כגיבוי לא פעיל).</p>
+<p>2. <b>להתקין את ה-launcher החדש כ-priv-app</b> (לא אפליקציית משתמש רגילה), באותה</p>
+<p>   שיטה: תיקייה תחת <code>system_ext/priv-app/&lt;YourLauncher&gt;/</code>, עם <code>AndroidManifest.xml</code></p>
+<p>   שמצהיר על אותו intent-filter:</p>
+<p>   ```xml</p>
+<p>   &lt;activity android:name=&quot;.HomeActivity&quot;&gt;</p>
+<p>     &lt;intent-filter&gt;</p>
+<p>       &lt;action android:name=&quot;android.intent.action.MAIN&quot;/&gt;</p>
+<p>       &lt;category android:name=&quot;android.intent.category.HOME&quot;/&gt;</p>
+<p>       &lt;category android:name=&quot;android.intent.category.DEFAULT&quot;/&gt;</p>
+<p>     &lt;/intent-filter&gt;</p>
+<p>   &lt;/activity&gt;</p>
+<p>   ```</p>
+<p>3. <b>הרשאות שה-launcher המקורי ביקש</b> (ולכן כנראה גם שלך תצטרך, תלוי מה הוא עושה):</p>
+<p>   <code>BIND_APPWIDGET</code>, ‏<code>WRITE_SECURE_SETTINGS</code>, ‏<code>STATUS_BAR</code>, ‏<code>STOP_APP_SWITCHES</code>,</p>
+<p>   ‏<code>START_TASKS_FROM_RECENTS</code>, ‏<code>CONTROL_REMOTE_APP_TRANSITION_ANIMATIONS</code>,</p>
+<p>   ‏<code>BROADCAST_CLOSE_SYSTEM_DIALOGS</code>, ‏<code>ALLOW_SLIPPERY_TOUCHES</code>. אלה **הרשאות</p>
+<p>   privileged**, כלומר (כמו שראינו בכל האטלס) חובה להוסיף אותן לקובץ allowlist,</p>
+<p>   אחרת <code>ro.control_privapp_permissions=enforce</code> יתפוס את זה ויפיל אתחול.</p>
+<p>   קובץ האלואליסט המקורי של launcher3 נמצא ב-</p>
+<p>   <code>system_ext/etc/permissions/com.android.launcher3.xml</code>. צריך קובץ מקביל חדש</p>
+<p>   (<code>system_ext/etc/permissions/&lt;your.package&gt;.xml</code>) עם <b>רק</b> ההרשאות שה-launcher</p>
+<p>   החדש שלך באמת צריך (לא חובה להעתיק את כל הרשימה, רק מה שבאמת בשימוש).</p>
+<p>4. <b>אם ה-launcher החדש צריך לקרוא/לכתוב הגדרות מערכת</b> (כמו טפט, grid, מצב</p>
+<p>   כהה): <code>WRITE_SECURE_SETTINGS</code> כבר ברשימה למעלה, מכסה את רוב המקרים.</p>
+<h3>רמת ביטחון</h3>
+<p>מי מתחרה על HOME ואילו הרשאות privileged נדרשות: <b>ודאי</b>, נשלף ישירות מהרום.</p>
+<p>ההמלצה הכללית (priv-app + allowlist): <b>גבוהה</b>, זהה לדפוס שכבר ראינו בכל שאר</p>
+<p>האטלס (overlays, deps אחרים). לא נבדק בפועל על מכשיר.</p></article></div></div></section></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
