@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus), M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/video_gatekeeper_design/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus), M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/video_gatekeeper_design/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=66043de6">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<section class="pagehead"><div class="wrap"><h1>תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus)</h1><p>M36 Plus, רום מקורי, סריקת עומק</p></div></section><section class="block"><div class="wrap"><div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus)</nav><article><h2 class="title">תכנון: מפענח וידיאו יחיד עם בדיקת אישור לפני ניגון (M36 Plus)</h2>
+<blockquote class="muted">ממשיך את <code>block_video_system_level.md</code>. שם נחסמו שתי השכבות (קודקים מערכתיים).</blockquote>
+<blockquote class="muted">כאן: במקום לחסום הכל, משאירים דרך אחת לוידיאו לעבור, ושמים עליה שומר (gatekeeper)</blockquote>
+<blockquote class="muted">שבודק אם הקובץ מאושר, לפני שהוא בכלל מגיע למפענח.</blockquote>
+<h3>שתי בעיות נפרדות, שתי תשובות</h3>
+<h4>בעיה א: אפליקציות עם מפענח וידיאו עצמאי, שעוקפות את המערכת לגמרי</h4>
+<p>סרקתי את כל 202 האפליקציות ברום (לא רק מה שהן *מצהירות*, אלא בדקתי בפועל את חתימות</p>
+<p>הפונקציות בתוך כל ספריית <code>.so</code> שהן נושאות, עם <code>nm -D</code>). נמצאו <b>שתי אפליקציות אמיתיות</b></p>
+<p>עם מפענח עצמאי:</p>
+<table><tr><th>אפליקציה</th><th>ספרייה</th><th>ההוכחה</th></tr>
+<tr><td><code>preinstall/vlc.apk</code></td><td><code>lib/arm64-v8a/libvlc.so</code></td><td>מכיל <code>removeH264or5EmulationBytes</code> (פענוח H.264 ישיר) ותמיכת Matroska/MKV מלאה</td></tr>
+<tr><td><code>preinstall/AmazonMusic.apk</code></td><td><code>lib/*/libav.so</code> (בכל הארכיטקטורות)</td><td>מכיל <code>avcodec_decode_audio4</code>, ספריית libavcodec אמיתית</td></tr>
+</table>
+<p><b>המשמעות:</b> גם אם המפענחים המערכתיים ייחסמו לגמרי, **VLC ו-AmazonMusic ימשיכו לנגן</p>
+<p>וידיאו<b>, כי הם לא שואלים את המערכת בכלל. הפתרון היחיד האמין: </b>להסיר את שתי</p>
+<p>האפליקציות האלה מהרום**, לא לנסות &quot;לתקן&quot; אותן (תיקון ברמת הקוד שלהן דורש לפרק ולשנות</p>
+<p>ספריית C++ שלמה, לא ריאלי). כלי הסריקה: <code>tools/bundled_decoders.py</code> באטלס, כדי להריץ</p>
+<p>מחדש על כל רום עתידי ולתפוס אפליקציה חדשה שתתווסף.</p>
+<h4>בעיה ב: איך משאירים מפענח אחד &quot;חי&quot; עם בדיקת אישור</h4>
+<p>לכל האפליקציות הרגילות (לא VLC/Amazon) אין ברירה: הן <b>חייבות</b> לעבור דרך ה-API</p>
+<p>הציבורי של אנדרואיד, <code>MediaExtractor</code>/<code>MediaCodec</code>. פירקתי את המחלקות האלה **ישירות</p>
+<p>מתוך <code>framework.jar</code> של M36** (לא הנחה כללית על אנדרואיד) כדי למצוא את נקודת המעבר</p>
+<p>האמיתית, היחידה, שכל הקריאות עוברות דרכה.</p>
+<h3>נקודת ההתערבות (מאומתת מהקוד של M36 עצמו)</h3>
+<p><code>MediaExtractor</code> חושף 7 גרסאות עמוסות (overloads) של <code>setDataSource(...)</code>, אחת</p>
+<p>לכל סוג מקור (String, Uri, FileDescriptor, MediaDataSource...). פירקתי את הפשוטה שבהן:</p>
+<pre><code>// android.media.MediaExtractor.setDataSource(String path), מתוך framework.jar של M36
+public final void setDataSource(String path) {
+    nativeSetDataSource(MediaHTTPService.createHttpServiceBinderIfNecessary(path), path, 0, 0);
+}</code></pre>
+<p>כל 7 הגרסאות מגיעות בסוף לאחת מכמה מתודות <code>native*</code> (<code>nativeSetDataSource</code>,</p>
+<p>וכדומה). <b>זו בדיוק נקודת התפר</b>: שורת קוד אחת, בתוך <code>updatable-media</code>/<code>framework.jar</code>,</p>
+<p>שאפשר להוסיף לה בדיקה <b>לפני</b> הקריאה ל-native.</p>
+<h4>התוספת המוצעת</h4>
+<pre><code>public final void setDataSource(String path) {
+    if (!VideoGate.isApproved(path)) {               // הקוד החדש
+        throw new java.io.IOException(&quot;not approved&quot;); // המשתמש רואה שגיאה, לא קורס
+    }
+    nativeSetDataSource(MediaHTTPService.createHttpServiceBinderIfNecessary(path), path, 0, 0);
+}</code></pre>
+<p>אותה שורה, בהתאמה, בכל אחת מ-6 הגרסאות הנוספות וב-<code>MediaCodec.configure</code>/</p>
+<p><code>native_configure</code> (למקרה שאפליקציה מריצה decode ישיר בלי <code>MediaExtractor</code>).</p>
+<h4><code>VideoGate.isApproved(path)</code>, איך בפועל לבדוק &quot;חתימה&quot;</h4>
+<p>שתי דרכים, מהפשוטה למחמירה:</p>
+<p>1. <b>רשימת טביעות אצבע (מומלץ להתחלה).</b> מחשבים <code>SHA-256</code> לכל קובץ וידיאו מאושר</p>
+<p>   מראש, ושומרים רשימה בקובץ שמוטבע ברום (<code>/system/etc/approved_videos.json</code>,</p>
+<p>   רק root יכול לכתוב לו). <code>isApproved()</code> מחשב <code>SHA-256</code> לקובץ שמנסים לפתוח ובודק</p>
+<p>   התאמה ברשימה. פשוט, אמין, אי אפשר לזייף בלי לשנות את הקובץ עצמו (ואז ה-hash</p>
+<p>   משתנה וייכשל).</p>
+<p>2. <b>חתימה קריפטוגרפית אמיתית (RSA/Ed25519).</b> כל קובץ וידיאו מאושר מגיע עם קובץ</p>
+<p>   חתימה נלווה (<code>video.mp4.sig</code>), והמערכת מאמתת אותה מול מפתח ציבורי שמוטבע ברום.</p>
+<p>   חזק יותר (אפשר להוסיף וידיאו חדש בלי לשנות את הרום, כל עוד הוא חתום), אבל דורש</p>
+<p>   תשתית חתימה (מפתח פרטי אצלך, תהליך חתימה לכל קובץ).</p>
+<p><b>המלצה:</b> להתחיל באפשרות 1 (hash). עוברים לאפשרות 2 רק אם צריך להוסיף סרטונים</p>
+<p>חדשים בלי לצרוב רום מחדש בכל פעם.</p>
+<h3>מה עוד לקחת בחשבון (כנות על המגבלות)</h3>
+<ul>
+<li><b>הקובץ עצמו צריך להיקרא פיזית כדי לחשב hash</b>, כלומר יש עלות ביצועים קטנה בכל</li>
+</ul>
+<p>  פתיחת וידיאו (סריקת הקובץ פעם אחת). לא בעיה לקבצים מקומיים רגילים.</p>
+<ul>
+<li><b>סטרימינג (URL)</b>: הגרסה <code>setDataSource(Context, Uri, Map)</code> יכולה להצביע על כתובת</li>
+</ul>
+<p>  אינטרנט. אי אפשר לחשב hash מראש לתוכן שמשתנה. הפתרון הפשוט: לחסום לגמרי מקורות</p>
+<p>  שהם <code>http(s)://</code>, ולאשר רק קבצים מקומיים/תוכן שמגיע דרך ספק תוכן מאושר.</p>
+<ul>
+<li><b><code>MediaCodec</code> ישיר</b>: אפליקציה יכולה לעקוף את <code>MediaExtractor</code> ולהשתמש ב-</li>
+</ul>
+<p>  <code>MediaCodec</code> עם <code>ByteBuffer</code>-ים ידניים (למשל סטרימינג מותאם אישית). לכן צריך את</p>
+<p>  הבדיקה גם ב-<code>MediaCodec.configure</code>, לא רק ב-<code>MediaExtractor</code>, כפי שצוין למעלה.</p>
+<ul>
+<li><b>זה תיקון ב-Java bytecode</b> (כמו שעשינו ל-PackageManagerService): אחרי השינוי</li>
+</ul>
+<p>  ב-<code>framework.jar</code>, צריך למחוק את ה-<code>boot.oat</code>/<code>vdex</code> המתאימים (ART מקמפל את</p>
+<p>  הפריימוורק מראש בעלייה הראשונה; בלי זה הקוד הישן ימשיך לרוץ).</p>
+<h3>רמת ביטחון</h3>
+<p>נקודת ההתערבות (<code>setDataSource</code>, <code>native_configure</code>) ושמות המתודות: <b>ודאיות</b>,</p>
+<p>פורקו ישירות מ-M36. היתכנות הגישה (hash-list / חתימה): <b>גבוהה</b>, עיקרון סטנדרטי.</p>
+<p>לא נבנה ולא נבדק קוד בפועל. זה מסמך תכנון, לא תיקון מוכן.</p></article></div></div></section></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
