@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>תלות: מתקין החבילות (PackageInstaller), M36 Plus, M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="תלות: מתקין החבילות (PackageInstaller), M36 Plus. ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/installer/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="תלות: מתקין החבילות (PackageInstaller), M36 Plus, M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="תלות: מתקין החבילות (PackageInstaller), M36 Plus. ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/installer/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=66043de6">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<section class="pagehead"><div class="wrap"><h1>תלות: מתקין החבילות (PackageInstaller), M36 Plus</h1><p>M36 Plus, רום מקורי, סריקת עומק</p></div></section><section class="block"><div class="wrap"><div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / תלות: מתקין החבילות (PackageInstaller), M36 Plus</nav><article><h2 class="title">תלות: מתקין החבילות (PackageInstaller), M36 Plus</h2>
+<blockquote class="muted">קוד מפורק מתוך <code>system/framework/services.jar</code> של M36 Plus (androguard).</blockquote>
+<blockquote class="muted">חבילה ברום: <code>com.google.android.packageinstaller</code></blockquote>
+<blockquote class="muted">(שונה משם החבילה ב-F21/GTR, שם זו <code>com.android.packageinstaller</code>)</blockquote>
+<blockquote class="muted">נתיב: <code>/system/priv-app/GooglePackageInstaller/GooglePackageInstaller.apk</code></blockquote>
+<p>זהו תרגיל מלא בשיטה שביקשת: **לכל בדיקה, לבדוק אם יש בדיקה נוספת שסומכת עליה, ועוד</p>
+<p>אחת, עד שאין יותר.<b> נמצאו </b>שתי שכבות נפרדות** בקוד, לא אחת. כל שלב כאן מתועד עד הסוף.</p>
+<h3>שכבה 1: שתי הבדיקות ש&quot;חייבות&quot; installer/uninstaller (מפילות אתחול)</h3>
+<p>זהה למה שנמצא ב-F21 (ראו ההסבר המלא שם): בבנאי של <code>PackageManagerService</code>,</p>
+<p><code>getRequiredInstallerLPr()</code> ו-<code>getRequiredUninstallerLPr()</code> דורשות <b>בדיוק אפליקציה אחת</b></p>
+<p>שמגיבה ל-<code>INSTALL_PACKAGE</code>/<code>UNINSTALL_PACKAGE</code>. אפס או שתיים: <code>RuntimeException</code>,</p>
+<p>‏<code>system_server</code> קורס, לולאת אתחול.</p>
+<p><b>נטרול:</b> לגרום לשתי המתודות להחזיר <code>null</code> במקום לזרוק, ולמחוק את <code>services.odex/vdex/art</code></p>
+<p>התואמים (אחרת ART עלול להמשיך להריץ את הקוד הישן מה-AOT המהודר מראש).</p>
+<h3>שכבה 2: האם יש בדיקה נוספת שתלויה בקיום ה-installer?</h3>
+<p>חיפשתי בכל הקוד (init.rc, SELinux seapp_contexts, service_contexts) אזכור ישיר לשם</p>
+<p>החבילה <code>com.google.android.packageinstaller</code> או לקובץ שלה, מעבר לבדיקת</p>
+<p>PackageManagerService. <b>לא נמצא אף הפניה נוספת</b> (לא שירות init, לא כלל SELinux ייעודי).</p>
+<p>אבל הסריקה האוטומטית (<code>boot_guards.py</code>) כן מצאה <b>מתודה שלישית</b> בקוד שעלולה להיראות</p>
+<p>קשורה: <code>getInstantAppInstallerLPr()</code>. פירקתי אותה כדי לדעת בוודאות מה היא עושה:</p>
+<pre><code>// PackageManagerService.getInstantAppInstallerLPr(), מקוצר
+Intent i = new Intent().setAction(&quot;android.intent.action.INSTALL_INSTANT_APP_PACKAGE&quot;);
+List matches = computer.queryIntentActivitiesInternal(i, MIME, flags, 0);
+// מסנן רק פעילויות עם הרשאת INSTALL_PACKAGES
+if (matches.size() != 0) {
+    if (matches.size() != 1)
+        throw new RuntimeException(&quot;There must be at most one ephemeral installer; found &quot; + matches);
+    return matches.get(0).getComponentInfo();
+}
+return null;   // &lt;-- אפס תוצאות: לא זורק, רק מחזיר null</code></pre>
+<p><b>התשובה המדויקת:</b> הבדיקה הזו זורקת שגיאה רק אם יש <b>שתיים או יותר</b> אפליקציות</p>
+<p>שמגיבות ל-<code>INSTALL_INSTANT_APP_PACKAGE</code>. אם אין אף אחת (המצב אחרי מחיקת ה-installer),</p>
+<p>היא פשוט מחזירה <code>null</code> בלי לזרוק. <b>זו לא תלות נוספת שחוסמת מחיקה.</b> המסקנה: שכבה 2</p>
+<p>כבר &quot;בטוחה מעצמה&quot; מול המצב של אפס, ולא צריך לנטרל אותה בנפרד.</p>
+<h3>שכבה 3: מי עוד קורא לתוצאה (לא רק את הבדיקה, גם מי משתמש בה)</h3>
+<p>כמו ב-F21: <code>getPackageInstallerPackageName()</code> חושף את השם החוצה, ונקרא מ-</p>
+<p><code>PackageInstallerSession.makeSessionActiveLocked</code> כדי לפתוח למשתמש את מסך &quot;אשר התקנה&quot;.</p>
+<p>אם השם <code>null</code>: הקריאה <code>intent.setPackage(null)</code> לא קורסת, רק לא ימצא מי שיציג את המסך.</p>
+<p><b>אין כאן שכבה רביעית</b> שצריך לבדוק; זה הסוף של השרשרת.</p>
+<h3>מסקנה מעשית</h3>
+<p>כדי למחוק את <code>com.google.android.packageinstaller</code> ב-M36 Plus בלי לקרוס:</p>
+<p>1. לנטרל את שתי המתודות בשכבה 1 (installer + uninstaller) ב-<code>services.jar</code>.</p>
+<p>2. למחוק את <code>services.odex/vdex/art</code>.</p>
+<p>3. שכבה 2 (instant-app installer) ושכבה 3 (שימוש בשם) לא דורשות כלום נוסף.</p>
+<p><b>מה יפסיק לעבוד:</b> התקנת APK מתוך הטלפון, מסך &quot;הסר אפליקציה&quot;. <b>מה ימשיך:</b> <code>adb install</code>.</p>
+<h3>רמת ביטחון</h3>
+<p>שכבה 1: <b>ודאי</b> (זהה ל-F21, קוד זהה ב-AOSP). שכבה 2: <b>ודאי</b>, פורקה ישירות מ-M36</p>
+<p>עצמו (לא הנחה, קוד אמיתי). שכבה 3: <b>גבוהה</b>. לא נבדק בפועל על מכשיר.</p></article></div></div></section></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
