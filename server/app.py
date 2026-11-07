@@ -190,9 +190,13 @@ def send_mail(d):
         color, e(cat), e(d.get("time", "")), row % ("שם", e(d["name"])), (row % ("טלפון", e(phone)) if phone else "") + (row % ("מייל", e(email)) if email else "") + (row % ("דרך קשר", e(d["contact"])) if not (phone or email) else ""),
         row % ("נושא", e(d["subject"] or "לא נבחר")), color, e(d["message"]), acts)
     m = EmailMessage()
-    m["Subject"] = "[%s] פנייה מ%s" % (cat, d["name"])
+    m["Subject"] = "פנייה מהאתר · %s · %s" % (cat, d["name"])
     m["From"] = "כשר טק - אתר <%s>" % SMTP_USER
-    m["To"] = MAIL_TO
+    # "name+site@gmail.com" lands in the same inbox and gives a stable address for a Gmail filter
+    to = MAIL_TO
+    if to.lower().endswith("@gmail.com") and "+" not in to:
+        to = to.replace("@", "+site@", 1)
+    m["To"] = to
     if email:
         m["Reply-To"] = email
     m.set_content("שם: %s\nדרך קשר: %s\nנושא: %s\n\n%s\n" % (d["name"], d["contact"], d["subject"], d["message"]))
