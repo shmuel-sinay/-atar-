@@ -136,17 +136,84 @@ def rate(table, ip, limit, window):
         table[ip] = recent
     return False
 
+# category colour per subject, for the mail's header strip
+CATS = [("נגן", "הכשרת נגנים", "#0f4c3a"), ("מחשב", "מחשבים", "#1f5f8b"), ("תוכנה", "תוכנה", "#5b3f8c"),
+        ("פיתוח", "פיתוח ועבודות", "#5b3f8c"), ("עיצוב", "עיצוב גרפי", "#b5487a"), ("אתר", "בניית אתרים", "#1f6f6f"),
+        ("חנות", "חנות ומוצרים", "#b3690a"), ("הזמנה", "הזמנה מהחנות", "#b3690a")]
+
+def mail_kind(contact):
+    c = contact.replace(" ", "").replace("-", "")
+    if "@" in c and "." in c.split("@")[-1]:
+        return "email", c
+    digits = "".join(ch for ch in c if ch.isdigit())
+    if 9 <= len(digits) <= 13:
+        if digits.startswith("972"):
+            digits = "0" + digits[3:]
+        return "phone", digits
+    return "", ""
+
+def mail_html(title, color, body):
+    return ('<!doctype html><html dir="rtl" lang="he"><body style="margin:0;background:#f4f1ea;font-family:Arial,sans-serif">'
+            '<table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;padding:24px 0"><tr><td align="center">'
+            '<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%%;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e3dccb">'
+            '<tr><td style="background:#0f3d2e;padding:18px 24px;color:#fff;font-size:20px;font-weight:bold;text-align:right">כשר טק</td></tr>'
+            '<tr><td style="background:%s;height:6px;font-size:0">&nbsp;</td></tr>'
+            '<tr><td style="padding:24px;text-align:right;color:#1d2a24;font-size:15px;line-height:1.7">'
+            '<h1 style="margin:0 0 16px;font-size:21px;color:#0f3d2e">%s</h1>%s</td></tr>'
+            '<tr><td style="padding:14px 24px;background:#faf8f3;color:#7a7f78;font-size:12px;text-align:right">kosher-tek.com</td></tr>'
+            '</table></td></tr></table></body></html>') % (color, title, body)
+
 def send_mail(d):
     if not (SMTP_USER and SMTP_PASS and MAIL_TO):
         return
+    from html import escape as e
+    cat, color = "פנייה כללית", "#c9a24a"
+    for key, name, col in CATS:
+        if key in d["subject"]:
+            cat, color = name, col
+            break
+    kind, addr = mail_kind(d["contact"])
+    btn = '<a href="%s" style="display:inline-block;background:%s;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:bold;margin:0 0 0 8px">%s</a>'
+    acts = ""
+    if kind == "email":
+        acts = btn % ("mailto:" + e(addr) + "?subject=" + e("מענה לפנייתך לכשר טק"), "#0f3d2e", "השב במייל")
+    elif kind == "phone":
+        wa = "972" + addr[1:] if addr.startswith("0") else addr
+        acts = btn % ("tel:" + addr, "#0f3d2e", "התקשר") + btn % ("https://wa.me/" + wa, "#1f8a4c", "וואטסאפ")
+    row = '<tr><td style="padding:8px 0;color:#7a7f78;width:90px;vertical-align:top">%s</td><td style="padding:8px 0;font-weight:bold">%s</td></tr>'
+    body = ('<p style="margin:0 0 14px"><span style="background:%s;color:#fff;border-radius:999px;padding:4px 12px;font-size:13px">%s</span>'
+            ' <span style="color:#7a7f78;font-size:13px">%s</span></p>'
+            '<table cellpadding="0" cellspacing="0" style="width:100%%;border-top:1px solid #eee">%s%s%s</table>'
+            '<div style="margin:18px 0;padding:16px;background:#faf8f3;border-right:4px solid %s;border-radius:8px;white-space:pre-wrap">%s</div>%s') % (
+        color, e(cat), e(d.get("time", "")), row % ("שם", e(d["name"])), row % ("דרך קשר", e(d["contact"])),
+        row % ("נושא", e(d["subject"] or "לא נבחר")), color, e(d["message"]), acts)
     m = EmailMessage()
-    m["Subject"] = "פנייה חדשה מהאתר: " + d["subject"]
-    m["From"] = SMTP_USER
+    m["Subject"] = "[%s] פנייה מ%s" % (cat, d["name"])
+    m["From"] = "כשר טק - אתר <%s>" % SMTP_USER
     m["To"] = MAIL_TO
+    if kind == "email":
+        m["Reply-To"] = addr
     m.set_content("שם: %s\nדרך קשר: %s\nנושא: %s\n\n%s\n" % (d["name"], d["contact"], d["subject"], d["message"]))
+    m.add_alternative(mail_html("פנייה חדשה מהאתר", color, body), subtype="html")
+    msgs = [m]
+    # short confirmation to the customer when he left an email (no echo of his text, so it can't be used to spam others)
+    if kind == "email":
+        r = EmailMessage()
+        r["Subject"] = "קיבלנו את פנייתך - כשר טק"
+        r["From"] = "כשר טק <%s>" % SMTP_USER
+        r["To"] = addr
+        r["Reply-To"] = MAIL_TO
+        txt = "שלום %s,\n\nתודה שפנית לכשר טק. קיבלנו את הפנייה, ונחזור אליך בהקדם.\n\nכשר טק · kosher-tek.com" % d["name"][:40]
+        r.set_content(txt)
+        r.add_alternative(mail_html("קיבלנו את פנייתך", "#c9a24a",
+            '<p>שלום %s,</p><p>תודה שפנית לכשר טק. הפנייה התקבלה, ונחזור אליך בהקדם.</p>'
+            '<p>כל ההתאמות שחלמתם עליהן, במחירי רצפה.</p>'
+            '<p><a href="https://kosher-tek.com/" style="display:inline-block;background:#0f3d2e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:bold">לאתר כשר טק</a></p>' % e(d["name"][:40])), subtype="html")
+        msgs.append(r)
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as s:
         s.login(SMTP_USER, SMTP_PASS)
-        s.send_message(m)
+        for x in msgs:
+            s.send_message(x)
 
 def read_messages():
     out = []
