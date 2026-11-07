@@ -23,7 +23,7 @@ SMTP_PASS = os.environ.get("KT_SMTP_PASS", "")
 MAIL_TO = os.environ.get("KT_MAIL_TO", SMTP_USER)
 ADMIN_PASS = os.environ.get("KT_ADMIN_PASS", "")
 SESSION_SECONDS = 12 * 3600
-MAX = {"name": 100, "contact": 150, "subject": 80, "message": 4000}
+MAX = {"name": 100, "contact": 150, "phone": 30, "email": 120, "subject": 80, "message": 4000}
 lock = threading.Lock()
 hits, login_fail = {}, {}
 
@@ -172,36 +172,38 @@ def send_mail(d):
         if key in d["subject"]:
             cat, color = name, col
             break
-    kind, addr = mail_kind(d["contact"])
+    phone = d.get("phone") or (mail_kind(d["contact"])[1] if mail_kind(d["contact"])[0] == "phone" else "")
+    email = d.get("email") or (mail_kind(d["contact"])[1] if mail_kind(d["contact"])[0] == "email" else "")
+    tel = mail_kind(phone)[1] if phone and mail_kind(phone)[0] == "phone" else ""
     btn = '<a href="%s" style="display:inline-block;background:%s;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:bold;margin:0 0 0 8px">%s</a>'
     acts = ""
-    if kind == "email":
-        acts = btn % ("mailto:" + e(addr) + "?subject=" + e("מענה לפנייתך לכשר טק"), "#0f3d2e", "השב במייל")
-    elif kind == "phone":
-        wa = "972" + addr[1:] if addr.startswith("0") else addr
-        acts = btn % ("tel:" + addr, "#0f3d2e", "התקשר") + btn % ("https://wa.me/" + wa, "#1f8a4c", "וואטסאפ")
+    if tel:
+        wa = "972" + tel[1:] if tel.startswith("0") else tel
+        acts += btn % ("tel:" + tel, "#0f3d2e", "התקשר") + btn % ("https://wa.me/" + wa, "#1f8a4c", "וואטסאפ")
+    if email:
+        acts += btn % ("mailto:" + e(email) + "?subject=" + e("מענה לפנייתך לכשר טק"), "#1f5f8b", "השב במייל")
     row = '<tr><td style="padding:8px 0;color:#7a7f78;width:90px;vertical-align:top">%s</td><td style="padding:8px 0;font-weight:bold">%s</td></tr>'
     body = ('<p style="margin:0 0 14px"><span style="background:%s;color:#fff;border-radius:999px;padding:4px 12px;font-size:13px">%s</span>'
             ' <span style="color:#7a7f78;font-size:13px">%s</span></p>'
             '<table cellpadding="0" cellspacing="0" style="width:100%%;border-top:1px solid #eee">%s%s%s</table>'
             '<div style="margin:18px 0;padding:16px;background:#faf8f3;border-right:4px solid %s;border-radius:8px;white-space:pre-wrap">%s</div>%s') % (
-        color, e(cat), e(d.get("time", "")), row % ("שם", e(d["name"])), row % ("דרך קשר", e(d["contact"])),
+        color, e(cat), e(d.get("time", "")), row % ("שם", e(d["name"])), (row % ("טלפון", e(phone)) if phone else "") + (row % ("מייל", e(email)) if email else "") + (row % ("דרך קשר", e(d["contact"])) if not (phone or email) else ""),
         row % ("נושא", e(d["subject"] or "לא נבחר")), color, e(d["message"]), acts)
     m = EmailMessage()
     m["Subject"] = "[%s] פנייה מ%s" % (cat, d["name"])
     m["From"] = "כשר טק - אתר <%s>" % SMTP_USER
     m["To"] = MAIL_TO
-    if kind == "email":
-        m["Reply-To"] = addr
+    if email:
+        m["Reply-To"] = email
     m.set_content("שם: %s\nדרך קשר: %s\nנושא: %s\n\n%s\n" % (d["name"], d["contact"], d["subject"], d["message"]))
     m.add_alternative(mail_html("פנייה חדשה מהאתר", color, body), subtype="html")
     msgs = [m]
     # short confirmation to the customer when he left an email (no echo of his text, so it can't be used to spam others)
-    if kind == "email":
+    if email:
         r = EmailMessage()
         r["Subject"] = "קיבלנו את פנייתך - כשר טק"
         r["From"] = "כשר טק <%s>" % SMTP_USER
-        r["To"] = addr
+        r["To"] = email
         r["Reply-To"] = MAIL_TO
         txt = "שלום %s,\n\nתודה שפנית לכשר טק. קיבלנו את הפנייה, ונחזור אליך בהקדם.\n\nכשר טק · kosher-tek.com" % d["name"][:40]
         r.set_content(txt)
@@ -350,6 +352,10 @@ class H(BaseHTTPRequestHandler):
         if d.get("website"):
             return self.reply(200, {"ok": True})
         c = {k: clip(d.get(k), mx) for k, mx in MAX.items()}
+        if c["email"] and not mail_kind(c["email"])[0] == "email":
+            c["email"] = ""
+        if not c["contact"]:
+            c["contact"] = " · ".join(x for x in (c["phone"], c["email"]) if x)
         if not c["name"] or not c["contact"] or not c["message"]:
             return self.reply(400, {"error": "missing"})
         if rate(hits, ip, 8, 3600):
