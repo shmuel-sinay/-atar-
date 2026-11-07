@@ -211,3 +211,4 @@ details.faq{background:var(--card);border:1px solid var(--line);border-radius:10
 details.faq summary{cursor:pointer;font-weight:700}
 details.faq p{margin:8px 0 0}
 @media(max-width:700px){.hero.lp .lpico{display:none}}
+.contact .formnote{margin:-4px 0 4px;font-size:13px;color:var(--ink-soft)}
