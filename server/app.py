@@ -21,6 +21,9 @@ SECRET_FILE = os.path.join(DIR, "secret")
 SMTP_USER = os.environ.get("KT_SMTP_USER", "")
 SMTP_PASS = os.environ.get("KT_SMTP_PASS", "")
 MAIL_TO = os.environ.get("KT_MAIL_TO", SMTP_USER)
+# the old default address from the first install: send to the site's current address instead
+if MAIL_TO in ("", "g47ben@gmail.com"):
+    MAIL_TO = "kt3182319@gmail.com"
 ADMIN_PASS = os.environ.get("KT_ADMIN_PASS", "")
 SESSION_SECONDS = 12 * 3600
 MAX = {"name": 100, "contact": 150, "subject": 80, "message": 4000}

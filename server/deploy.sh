@@ -8,7 +8,7 @@ if [ -d "$WEB/.git" ]; then git -C "$WEB" pull -q; else rm -rf "$WEB"; git clone
 cp "$WEB/server/nginx-kt.conf" /etc/nginx/conf.d/kt.conf
 # contact backend
 mkdir -p /var/lib/kt-contact /etc/kt-contact
-[ -f /etc/kt-contact/env ] || printf 'KT_SMTP_USER=\nKT_SMTP_PASS=\nKT_MAIL_TO=g47ben@gmail.com\n' > /etc/kt-contact/env
+[ -f /etc/kt-contact/env ] || printf 'KT_SMTP_USER=\nKT_SMTP_PASS=\nKT_MAIL_TO=kt3182319@gmail.com\n' > /etc/kt-contact/env
 chmod 600 /etc/kt-contact/env
 # admin password: created once, printed once
 if ! grep -q '^KT_ADMIN_PASS=.' /etc/kt-contact/env; then
