@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus), M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/block_video_system_level/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus), M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus). ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/block_video_system_level/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=66043de6">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<section class="pagehead"><div class="wrap"><h1>חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus)</h1><p>M36 Plus, רום מקורי, סריקת עומק</p></div></section><section class="block"><div class="wrap"><div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus)</nav><article><h2 class="title">חסימת וידיאו ברמת המערכת, בלי רוט, בלי אפליקציה חיצונית (M36 Plus)</h2>
+<blockquote class="muted">מטרה: לחסום ניגון/פתיחת קבצי וידיאו למשתמש, באופן שתקף לכל אפליקציה (לא רק לדפדפן</blockquote>
+<blockquote class="muted">או לנגן אחד), בלי להסתמך על אפליקציית חסימה שרצה עם הרשאות רוט.</blockquote>
+<h3>העיקרון: לאנדרואיד יש שתי שכבות לפענוח וידיאו, לא אחת</h3>
+<p>כמעט כל אפליקציה (כולל וואטסאפ, דפדפנים, גלריה) לא &quot;יודעת&quot; לפענח וידיאו בעצמה.</p>
+<p>היא פונה למסגרת המערכתית (MediaCodec), וזו בוחרת מפענח (decoder) מתוך **שתי רשימות</p>
+<p>נפרדות<b> שקיימות ברום הזה. </b>חוסמים רק אחת, השנייה עדיין עובדת.**</p>
+<h4>שכבה 1: מפענחי חומרה (vendor)</h4>
+<p>קובץ: <code>vendor/etc/media_codecs_c2.xml</code> (וגם <code>media_codecs_performance.xml</code>).</p>
+<p>מפענחי הווידיאו שמוצהרים שם:</p>
+<pre><code>c2.mtk.avc.decoder      (H.264)
+c2.mtk.hevc.decoder     (H.265)
+c2.mtk.vp9.decoder
+c2.mtk.mpeg4.decoder
+c2.mtk.mpeg2.decoder
+c2.mtk.h263.decoder
+c2.android.avc.decoder
+c2.android.hevc.decoder
+c2.android.vp8.decoder
+c2.android.vp9.decoder
+c2.android.av1.decoder
+c2.android.mpeg2.decoder
+c2.android.mpeg4.decoder
+c2.android.h263.decoder</code></pre>
+<h4>שכבה 2: מפענחי תוכנה (APEX, גיבוי של גוגל)</h4>
+<p>קובץ: <code>apex_extracted/com.google.android.media.swcodec/etc/media_codecs.xml</code>,</p>
+<p>מגובה ע&quot;י ספריות אמיתיות שקיימות ברום:</p>
+<pre><code>libstagefright_soft_avcdec.so
+libstagefright_soft_hevcdec.so
+libstagefright_soft_mpeg2dec.so
+libstagefright_soft_mpeg4dec.so
+libstagefright_soft_vpxdec.so   (VP8/VP9)</code></pre>
+<p>אותו APEX <b>מצהיר מחדש</b> על <code>c2.android.avc.decoder</code>, <code>c2.android.hevc.decoder</code> וכו׳.</p>
+<p>כלומר: גם אם מוחקים/מרוקנים את <code>media_codecs_c2.xml</code> של ה-vendor (שכבה 1), המערכת</p>
+<p>עדיין תמצא את אותם שמות מפענח דרך ה-APEX (שכבה 2), ב-<b>תוכנה</b>, בלי צורך בחומרה.</p>
+<h3>מה צריך לעשות, בפועל, כדי שזה באמת ייחסם</h3>
+<p>נטרול אמיתי דורש <b>את שתי השכבות יחד</b>:</p>
+<p>1. ב-<code>vendor/etc/media_codecs_c2.xml</code> וב-<code>media_codecs_performance.xml</code>: למחוק/להעיר את</p>
+<p>   כל אלמנט <code>&lt;MediaCodec&gt;</code> ששמו מכיל <code>avc</code>, <code>hevc</code>, <code>vp8</code>, <code>vp9</code>, <code>av1</code>, <code>mpeg2</code>, <code>mpeg4</code>,</p>
+<p>   <code>h263</code> ו<b>-decoder</b> (לא encoder, כדי לא לפגוע בצילום).</p>
+<p>2. באותו האופן ב-<code>apex_extracted/com.google.android.media.swcodec/etc/media_codecs.xml</code></p>
+<p>   (הקובץ בתוך ה-payload של ה-APEX <code>com.google.android.media.swcodec.apex</code>, ראו</p>
+<p>   <code>tools/apex_unpack.py</code> באטלס לאיך לפתוח ולסגור APEX מחדש).</p>
+<p>3. <b>מומלץ גם</b>: לנטרל את קבצי ה-<code>.so</code> עצמם (שינוי שם/מחיקה של</p>
+<p>   <code>libstagefright_soft_*dec.so</code> הרלוונטיים בתוך ה-APEX), כגיבוי אם משהו עדיין מצליח</p>
+<p>   לטעון אותם ישירות בלי לעבור דרך רשימת ה-XML.</p>
+<h3>התלות הבאה בשרשרת (עוד &quot;דור&quot;)</h3>
+<p>לאחר שינוי קובץ בתוך APEX, צריך לחתום ולארוז אותו מחדש (<code>apex_payload.img</code> + המניפסט),</p>
+<p>אחרת <code>apexd</code> (השירות שטוען APEX-ים בעלייה) עלול לדחות אותו כפגום. זו בדיוק הדוגמה</p>
+<p>לעיקרון שביקשת: <b>כל נטרול עלול לעורר בדיקה נוספת במעלה השרשרת</b> (כאן: apexd בודק את</p>
+<p>תקינות ה-APEX), וצריך לבדוק גם אותה.</p>
+<h3>מה זה לא פותר (כנות לגבי המגבלה)</h3>
+<ul>
+<li><b>אפליקציה שמביאה מפענח וידיאו משלה בתוך ה-APK</b> (ספריית ‎.so מוטמעת, למשל נגן מבוסס</li>
+</ul>
+<p>  FFmpeg עצמאי) תמשיך לעבוד, כי היא לא עוברת דרך MediaCodec בכלל. סרקתי את 202</p>
+<p>  האפליקציות ברום ולא מצאתי כאלה (<code>uses-library</code> לא מצהיר על ספריות כאלה), אבל הסריקה</p>
+<p>  הנוכחית לא פותחת כל APK ובודקת את קובצי ה-<code>.so</code> הפנימיים שלו, כך שזו לא הוכחה</p>
+<p>  מוחלטת. אם יתווסף לרום אפליקציה חדשה (כמו דפדפן מסוים), כדאי לבדוק אותה בנפרד.</p>
+<ul>
+<li>וידיאו שמוצג כרצף תמונות (GIF/WebP אנימטיבי) לא עובר דרך MediaCodec כלל, לא נחסם בזה.</li>
+</ul>
+<h3>רמת ביטחון</h3>
+<p>רשימות המפענחים ושמות הקבצים: <b>ודאיות</b>, נשלפו ישירות מהרום (<code>xml_config.json</code>,</p>
+<p><code>native_deps.json</code>). שרשרת apexd ודרישת החתימה מחדש: <b>גבוהה</b> (התנהגות AOSP מתועדת).</p>
+<p>לא נבדק בפועל על מכשיר.</p></article></div></div></section></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
