@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765, M36 Plus | אטלס רומים | כשר טק</title>
+<meta name="description" content="אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765. ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta name="theme-color" content="#0a3326">
+<link rel="canonical" href="https://kosher-tek.com/roms/m36-plus/deps/secure_boot_oem/">
+<meta property="og:type" content="website"><meta property="og:locale" content="he_IL"><meta property="og:site_name" content="כשר טק">
+<meta property="og:title" content="אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765, M36 Plus | אטלס רומים | כשר טק"><meta property="og:description" content="אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765. ניתוח טכני של M36 Plus (רום מקורי, סריקת עומק), חלק מאטלס הרומים של כשר טק.">
+<meta property="og:url" content="https://kosher-tek.com/roms/m36-plus/deps/secure_boot_oem/"><meta property="og:image" content="https://kosher-tek.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/logo-512.png" sizes="512x512" type="image/png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<link rel="stylesheet" href="/assets/style.css?v=4baf50c6">
+<link rel="stylesheet" href="/roms/atlas.css?v=66043de6">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="40" height="40"><span>כשר טק<small>טכנולוגיה מותאמת לציבור</small></span></a>
+  <nav class="main" aria-label="ראשי"><a href="/">בית</a><a href="/services/">שירותים</a><a href="/players/">הכשרת נגנים</a><a href="/roms/">למפתחים: אטלס רומים</a><a href="/shop/">חנות</a><a href="/contact/">צור קשר</a></nav>
+</div></header>
+<main>
+<section class="pagehead"><div class="wrap"><h1>אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765</h1><p>M36 Plus, רום מקורי, סריקת עומק</p></div></section><section class="block"><div class="wrap"><div class="atlas"><nav class="crumbs"><a href="/roms/">אטלס רומים</a> / <a href="/roms/m36-plus/">M36 Plus</a> / <a href="/roms/m36-plus/deps/">תלויות</a> / אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765</nav><article><h2 class="title">אטימות אמיתית: Secure Boot ביצרן (מפתח משלך), M36 / MT6765</h2>
+<blockquote class="muted">עדכון ל-<code>kosher_hardening.md</code>: נכון שאי אפשר &quot;לחסום צריבה&quot; ע&quot;י מחיקת קבצים או השחתת preloader.</blockquote>
+<blockquote class="muted">אבל יש תהליך תקני של יצרנים שעושה בדיוק את זה: <b>Secure Boot של MediaTek עם מפתח היצרן שלך</b>.</blockquote>
+<h3>איך זה עובד</h3>
+<p>1. <b>eFuse root key hash (SBC_EN)</b> – ב-OTP של השבב נצרב hash של המפתח הציבורי שלך. חד-כיווני.</p>
+<p>2. <b>BROM מאמת את ה-preloader</b> מול המפתח. preloader לא חתום על ידך – השבב לא מריץ אותו.</p>
+<p>3. <b>SLA/DAA</b> – ה-BROM מקבל Download Agent רק אם הוא חתום. בלי המפתח/קובץ ההרשאה שלך</p>
+<p>   SP Flash Tool לא צורב כלום, <b>גם לא את הרום המקורי של היצרן</b> (הוא חתום במפתח אחר).</p>
+<p>4. <b>שרשרת</b>: preloader → lk → tee → vbmeta/boot, AVB עם מפתח <b>שלך</b>, bootloader נעול, rollback index.</p>
+<p>5. <b>מערכת</b>: build מסוג user, ללא adb, <code>ro.debuggable=0</code>, SELinux enforcing, OEM unlock כבוי.</p>
+<p>התוצאה: רק מי שמחזיק במפתח החתימה שלך יכול לצרוב.</p>
+<h3>מה צריך</h3>
+<ul>
+<li>כלי Secure Boot / signing של MediaTek לשבב (מגיעים דרך MTK או ספק הלוחות; לא ציבוריים).</li>
+<li>זוג מפתחות RSA משלך, שמור אופליין, גיבוי מוצפן ב-2 מקומות לפחות (רצוי HSM/כרטיס חכם).</li>
+<li>תהליך חתימה לכל image: preloader, lk, tee, vbmeta (+ boot/super דרך AVB).</li>
+<li>2–3 יחידות ניסוי מוקרבות לפני כל מכשיר מהמלאי.</li>
+</ul>
+<h3>סיכונים לתכנון</h3>
+<ul>
+<li><b>eFuse בלתי הפיך</b>: חתימה או מפתח שגויים = מכשיר מת. ייצור רק אחרי ששרשרת מלאה עלתה ביחידת ניסוי.</li>
+<li><b>אובדן מפתח = אובדן הצי</b> (גם עדכונים לא יהיו אפשריים).</li>
+<li><b>לוח שכבר ננעל במפתח זר</b> במפעל – אי אפשר להחליף. לבדוק ביחידת דגימה לפני רכישה בכמות.</li>
+<li><b>גבול השבב</b>: ב-MT67xx מסוימים קיימות חולשות BROM ציבוריות שעלולות לעקוף את שלב האימות.</li>
+</ul>
+<p>  לבדוק את השבב המדויק. מול הלקוח לנסח &quot;דורש יכולת מעבדה&quot;, לא &quot;בלתי אפשרי&quot;.</p>
+<ul>
+<li>אל תשחית preloader ואל תשרוף fuses אקראיים – זה לא Secure Boot, זה בריק.</li>
+</ul>
+<h3>צעדים</h3>
+<p>1. לאשר שבב ויצרן preloader (נתונים ב-<code>avb.json</code>, <code>BOOT_CHAIN.md</code>).</p>
+<p>2. להשיג את חבילת ה-secure boot tooling.</p>
+<p>3. יחידת ניסוי: יצירת מפתחות → חתימה → צריבה → burn → אימות שצריבת רום מקורי נדחית.</p>
+<p>4. לבנות super נקי (הסרת רשת מהבסיס, <code>removal_recipes.json</code>) ולחתום באותו מפתח AVB.</p>
+<p>5. תהליך ייצור: סקריפט חתימה + צריבה + בדיקת איכות + תיעוד גיבוי מפתח.</p></article></div></div></section></main>
+<footer class="site"><div class="wrap">
+  <div class="cols">
+    <div><h4>כשר טק</h4><p>כל ההתאמות שחלמתם עליהן, למכשירים, נגנים ומחשבים: גם מה שיקר מדי אצל אחרים וגם מה שאף אחד לא עושה. והכול במחירי רצפה.</p></div>
+    <div><h4>ניווט</h4><ul><li><a href="/">בית</a></li><li><a href="/services/">שירותים</a></li><li><a href="/players/">הכשרת נגנים</a></li><li><a href="/roms/">למפתחים: אטלס רומים</a></li><li><a href="/shop/">חנות</a></li><li><a href="/contact/">צור קשר</a></li></ul></div>
+    <div><h4>יצירת קשר</h4><ul><li><a href="tel:0554407560">055-440-7560</a></li><li><a href="mailto:kt3182319@gmail.com">kt3182319@gmail.com</a></li><li><a href="/contact/">טופס פנייה</a></li></ul></div>
+  </div>
+  <div class="legal">© כשר טק</div>
+</div></footer>
+<script src="/assets/site.js?v=333c7c73" defer></script>
+</body></html>
