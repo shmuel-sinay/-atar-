@@ -21,6 +21,8 @@ body{display:flex;flex-direction:row}
 #status{color:var(--muted);font-size:.95rem}
 #status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
 .kbd{display:flex;flex-direction:column;gap:8px}
+.kbd #getclip{padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:700;cursor:pointer}
+.kbd #clipout{width:100%;height:80px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
 .kbd input{width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
 #kst{color:var(--muted);font-size:.9rem}#kst.ok{color:var(--ok)}#kst.bad{color:var(--bad)}
 iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
@@ -35,6 +37,8 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
 <small class="volnote">מעל 100% הקול מוגבר. הגברה גבוהה מדי עלולה לעוות את הצליל.</small>
 <span id="status"></span>
 <div class="kbd">
+  <button id="getclip" type="button">📋 העתק מהשרת</button>
+  <textarea id="clipout" hidden readonly></textarea>
   <input id="kkey" type="password" placeholder="קוד מקלדת (פעם אחת)" autocomplete="off" inputmode="numeric" hidden>
   <span id="kst"></span>
 </div>
@@ -112,7 +116,11 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     var me = ws = new WebSocket(proto + '//' + location.host + '/kbd/ws?key=' + encodeURIComponent(key));
     ws.onopen = function(){ st('מקלדת מחוברת', 'ok'); while (q.length) ws.send(q.shift()); };
-    ws.onmessage = function(e){ try { var m = JSON.parse(e.data); if (m.type === 'error') st(m.message || 'שגיאה', 'bad'); } catch (x) {} };
+    ws.onmessage = function(e){
+      var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (m.type === 'error') st(m.message || 'שגיאה', 'bad');
+      if (m.type === 'clip') gotClip(m.text || '');
+    };
     ws.onclose = function(e){
       if (ws !== me) return; ws = null;
       if (e.code === 4001) { key = ''; try { localStorage.removeItem('kbd-key'); } catch (x) {} return askKey(); }
@@ -146,8 +154,26 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
     var mod = e.ctrlKey || e.altKey || e.metaKey;
     if (!mod && e.key.length === 1) return typeChar(e.key);        // a plain character (Hebrew, English, digit, space)
     var k = base(e); if (!k) return;
+    if (k === 'v' && e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) return pasteLocal(e.view);
     var combo = (e.ctrlKey ? 'ctrl+' : '') + (e.altKey ? 'alt+' : '') + (e.metaKey ? 'super+' : '') + (e.shiftKey ? 'shift+' : '') + k;
     sendKey(combo);
+  }
+  // server clipboard -> this computer
+  function gotClip(t){
+    var out = $('clipout');
+    if (!t) { st('הלוח בשרת ריק', 'bad'); return; }
+    navigator.clipboard.writeText(t).then(function(){ out.hidden = true; st('✓ הועתק למחשב', 'ok'); }, function(){
+      // the browser refused (the click was too long ago): show the text to copy by hand
+      out.value = t; out.hidden = false; out.focus(); out.select(); st('סמן והעתק מהתיבה', 'bad');
+    });
+  }
+  $('getclip').onclick = function(){ st('מעתיק מהשרת…'); raw({ type: 'getclip' }); };
+  // Ctrl+V: paste what was copied on THIS computer (falls back to the server's own paste)
+  function pasteLocal(w){
+    var cb = (w && w.navigator.clipboard) || navigator.clipboard;
+    if (!cb || !cb.readText) return sendKey('ctrl+v');
+    cb.readText().then(function(t){ if (t) { flush(); raw({ type: 'type', text: t }); } else sendKey('ctrl+v'); },
+                       function(){ sendKey('ctrl+v'); });
   }
   function block(e){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
   function hook(){
