@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>שולחן עבודה עם קול</title>
+<style>
+:root{--bg:#111827;--bar:#1f2937;--text:#f3f4f6;--muted:#9ca3af;--accent:#2563eb;--ok:#22c55e;--bad:#f87171;--border:#374151}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Arial,sans-serif}
+body{display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:var(--bar);border-bottom:1px solid var(--border)}
+.bar button{padding:8px 14px;font-size:1rem;font-weight:700;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
+.bar button.on{background:var(--ok);color:#06210f}
+.bar input[type=password]{width:110px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1rem}
+.bar input[type=range]{width:110px}
+.meter{width:70px;height:8px;border-radius:5px;background:var(--border);overflow:hidden}
+.meter>div{height:100%;width:0;background:var(--ok);transition:width .08s linear}
+#status{color:var(--muted);font-size:.95rem}
+#status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
+iframe{flex:1;width:100%;border:0;background:#000}
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="toggle">🔊 הפעל קול</button>
+  <input id="key" type="password" placeholder="קוד גישה" autocomplete="off" inputmode="numeric">
+  <label for="vol" style="color:var(--muted)">עוצמה</label>
+  <input id="vol" type="range" min="0" max="2" step="0.05" value="1">
+  <div class="meter"><div id="level"></div></div>
+  <span id="status"></span>
+</div>
+<iframe id="desk" src="/desktop/vnc.html?autoconnect=true&resize=scale&reconnect=true" allow="clipboard-read; clipboard-write" title="שולחן עבודה"></iframe>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var ws, ctx, gain, cfg = null, nextTime = 0, on = false, retry, peak = 0;
+  var DELAY = 0.15; // שניות של מאגר נגינה
+  try { var k = localStorage.getItem('kol-key'); if (k) { $('key').value = k; $('key').hidden = true; } } catch (e) {}
+
+  function status(t, kind){ var s = $('status'); s.textContent = t; s.className = kind || ''; }
+
+  function connect(){
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/kol/ws?role=listener&room=main&key=' + encodeURIComponent($('key').value));
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = function(){ status('מחובר…'); };
+    ws.onmessage = function(e){
+      if (e.data instanceof ArrayBuffer) return play(e.data);
+      var m = JSON.parse(e.data);
+      if (m.type === 'config') { cfg = m; nextTime = 0; status('קול פעיל ✓', 'ok'); }
+      if (m.type === 'sender-gone') { cfg = null; status('אין קול מהשרת כרגע'); }
+      if (m.type === 'error') {
+        status(m.message, 'bad'); $('key').hidden = false;
+        try { localStorage.removeItem('kol-key'); } catch (x) {}
+        stop(true);
+      }
+    };
+    ws.onclose = function(e){
+      if (!on || e.code === 4001) return;
+      status('מתחבר מחדש…', 'bad'); retry = setTimeout(connect, 2000);
+    };
+  }
+
+  function play(buf){
+    if (!cfg || !ctx) return;
+    var ch = cfg.channels, pcm = new Int16Array(buf), frames = pcm.length / ch;
+    if (!frames) return;
+    var ab = ctx.createBuffer(ch, frames, cfg.sampleRate);
+    for (var c = 0; c < ch; c++) {
+      var out = ab.getChannelData(c);
+      for (var i = 0; i < frames; i++) { var v = pcm[i * ch + c] / 32768; out[i] = v; if (v < 0) v = -v; if (v > peak) peak = v; }
+    }
+    var now = ctx.currentTime;
+    if (nextTime < now + 0.01) nextTime = now + DELAY;   // המאגר התרוקן
+    else if (nextTime > now + DELAY + 0.25) return;      // הצטבר עיכוב – מדלגים
+    var src = ctx.createBufferSource(); src.buffer = ab; src.connect(gain); src.start(nextTime);
+    nextTime += ab.duration;
+  }
+
+  function start(){
+    if (!$('key').value) { status('צריך קוד גישה', 'bad'); $('key').focus(); return; }
+    try { localStorage.setItem('kol-key', $('key').value); } catch (e) {}
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    ctx.resume();
+    gain = ctx.createGain(); gain.gain.value = +$('vol').value; gain.connect(ctx.destination);
+    on = true; connect();
+    $('key').hidden = true; $('toggle').textContent = '🔇 כבה קול'; $('toggle').className = 'on';
+  }
+  function stop(keep){
+    on = false; clearTimeout(retry);
+    try { ws && ws.close(); } catch (e) {}
+    try { ctx && ctx.close(); } catch (e) {}
+    ws = ctx = gain = cfg = null;
+    $('toggle').textContent = '🔊 הפעל קול'; $('toggle').className = '';
+    if (keep !== true) status('');
+  }
+
+  $('toggle').onclick = function(){ on ? stop() : start(); };
+  $('key').onkeydown = function(e){ if (e.key === 'Enter') start(); };
+  $('vol').oninput = function(){ if (gain) gain.gain.value = +$('vol').value; };
+  setInterval(function(){ $('level').style.width = Math.min(100, peak * 100) + '%'; peak = 0; }, 100);
+})();
+</script>
+</body>
+</html>
