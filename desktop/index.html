@@ -21,7 +21,7 @@ body{display:flex;flex-direction:row}
 #status{color:var(--muted);font-size:.95rem}
 #status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
 .kbd{display:flex;flex-direction:column;gap:8px}
-.kbd #getclip{padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:700;cursor:pointer}
+.kbd #getclip,.kbd #kreset{padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:700;cursor:pointer}
 .kbd #clipout{width:100%;height:80px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
 .kbd input{width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
 #kst{color:var(--muted);font-size:.9rem}#kst.ok{color:var(--ok)}#kst.bad{color:var(--bad)}
@@ -38,6 +38,7 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
 <span id="status"></span>
 <div class="kbd">
   <button id="getclip" type="button">📋 העתק מהשרת</button>
+  <button id="kreset" type="button">שחרר מקשים</button>
   <textarea id="clipout" hidden readonly></textarea>
   <input id="kkey" type="password" placeholder="קוד מקלדת (פעם אחת)" autocomplete="off" inputmode="numeric" hidden>
   <span id="kst"></span>
@@ -167,6 +168,12 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
       out.value = t; out.hidden = false; out.focus(); out.select(); st('סמן והעתק מהתיבה', 'bad');
     });
   }
+  // release stuck Ctrl/Alt/Shift on the server whenever the page loses focus, and on demand
+  function reset(){ flush(); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'reset' })); }
+  window.addEventListener('blur', function(){ setTimeout(function(){ if (document.activeElement !== $('desk')) reset(); }, 0); });
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) reset(); });
+  window.addEventListener('pagehide', reset);
+  $('kreset').onclick = function(){ reset(); st('המקשים שוחררו', 'ok'); };
   $('getclip').onclick = function(){ st('מעתיק מהשרת…'); raw({ type: 'getclip' }); };
   // Ctrl+V: paste what was copied on THIS computer (falls back to the server's own paste)
   function pasteLocal(w){
@@ -180,7 +187,7 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
     var w; try { w = $('desk').contentWindow; w.document; } catch (e) { return st('לא ניתן לחבר מקלדת לשולחן העבודה', 'bad'); }
     if (w.__kbdHooked) return; w.__kbdHooked = true;
     w.addEventListener('keydown', onKey, true);
-    w.addEventListener('keyup', block, true);
+    // keyup is NOT blocked: if noVNC ever saw a key go down, it must also see it come up, or Ctrl stays stuck
     w.addEventListener('keypress', block, true);
   }
   $('desk').addEventListener('load', hook);
