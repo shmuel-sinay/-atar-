@@ -19,6 +19,12 @@ body{display:flex;flex-direction:column}
 .meter>div{height:100%;width:0;background:var(--ok);transition:width .08s linear}
 #status{color:var(--muted);font-size:.95rem}
 #status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
+.kbd{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 12px;background:var(--bar);border-bottom:1px solid var(--border)}
+.kbd textarea{flex:1;min-width:200px;height:36px;resize:vertical;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit}
+.kbd button{padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:600;cursor:pointer;direction:ltr}
+.kbd button.send{background:var(--accent);border-color:var(--accent);color:#fff;direction:rtl}
+.kbd input{width:100px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+#kst{color:var(--muted);font-size:.9rem}#kst.ok{color:var(--ok)}#kst.bad{color:var(--bad)}
 iframe{flex:1;width:100%;border:0;background:#000}
 </style>
 </head>
@@ -29,6 +35,13 @@ iframe{flex:1;width:100%;border:0;background:#000}
   <input id="vol" type="range" min="0" max="2" step="0.05" value="1">
   <div class="meter"><div id="level"></div></div>
   <span id="status"></span>
+</div>
+<div class="kbd">
+  <textarea id="ktext" placeholder="הקלד או הדבק טקסט ולחץ Enter" title="Enter שולח, Shift+Enter לשורה חדשה"></textarea>
+  <button class="send" id="ksend">שלח טקסט</button>
+  <input id="kkey" type="password" placeholder="קוד מקלדת" autocomplete="off" inputmode="numeric" hidden>
+  <button data-k="ctrl+c">Ctrl+C</button><button data-k="ctrl+v">Ctrl+V</button><button data-k="ctrl+z">Ctrl+Z</button><button data-k="ctrl+a">Ctrl+A</button><button data-k="Escape">Esc</button><button data-k="Return">Enter</button><button data-k="Tab">Tab</button><button data-k="alt+Tab">Alt+Tab</button><button data-k="Left">&larr;</button><button data-k="Up">&uarr;</button><button data-k="Down">&darr;</button><button data-k="Right">&rarr;</button><button data-k="BackSpace">Backspace</button>
+  <span id="kst"></span>
 </div>
 <iframe id="desk" src="/desktop/app/vnc.html?autoconnect=1&resize=scale&reconnect=true" allow="clipboard-read; clipboard-write" title="שולחן עבודה"></iframe>
 <script>
@@ -79,6 +92,44 @@ iframe{flex:1;width:100%;border:0;background:#000}
   };
   $('vol').oninput = function(){ gain.gain.value = +$('vol').value; };
   setInterval(function(){ $('level').style.width = Math.min(100, peak * 100) + '%'; peak = 0; }, 100);
+  connect();
+})();
+</script>
+<script>
+// reliable keyboard: text is pasted on the server, shortcuts are sent as key combos (server/ service on /kbd/ws)
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var ws, q = [], retry, key = '';
+  try { key = localStorage.getItem('kbd-key') || ''; } catch (e) {}
+  function st(t, k){ $('kst').textContent = t; $('kst').className = k || ''; }
+  function askKey(){ $('kkey').hidden = false; $('kkey').focus(); st('צריך קוד מקלדת (פעם אחת)', 'bad'); }
+  function connect(){
+    if (!key) return askKey();
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/kbd/ws?key=' + encodeURIComponent(key));
+    ws.onopen = function(){ st('מקלדת מחוברת', 'ok'); while (q.length) ws.send(q.shift()); };
+    ws.onmessage = function(e){ try { var m = JSON.parse(e.data); if (m.type === 'error') st(m.message || 'שגיאה', 'bad'); } catch (x) {} };
+    ws.onclose = function(e){
+      ws = null;
+      if (e.code === 4001) { key = ''; try { localStorage.removeItem('kbd-key'); } catch (x) {} return askKey(); }
+      st('מקלדת: מתחבר מחדש', 'bad'); clearTimeout(retry); retry = setTimeout(connect, 2000);
+    };
+  }
+  function send(o){
+    var d = JSON.stringify(o);
+    if (ws && ws.readyState === 1) ws.send(d); else { q.push(d); if (!ws) connect(); }
+  }
+  function sendText(){ var t = $('ktext').value; if (!t) return; send({ type: 'type', text: t }); $('ktext').value = ''; $('ktext').focus(); }
+  $('ksend').onclick = sendText;
+  $('ktext').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } };
+  $('kkey').onkeydown = function(e){
+    if (e.key !== 'Enter' || !this.value) return;
+    key = this.value; try { localStorage.setItem('kbd-key', key); } catch (x) {}
+    this.value = ''; this.hidden = true; connect();
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.kbd [data-k]'), function(b){
+    b.onclick = function(){ send({ type: 'key', key: b.getAttribute('data-k') }); };
+  });
   connect();
 })();
 </script>

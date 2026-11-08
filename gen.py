@@ -513,10 +513,12 @@ write("/market/admin/", ma)
 
 # ---------- HUB: one private page with a button to every group (not linked from anywhere) ----------
 HUB = [
- ("האתר הפרטי (כשר טק)", [("האתר", "/"), ("ניהול האתר", "/admin/")]),
- ("הצ'אט של הוועד", [("הצ'אט", "/chat/"), ("כניסת מנהל-על", "/chat/#/dev")]),
- ("הפורום", [("הפורום", "/market/"), ("ניהול הפורום", "/market/admin/")]),
+ ("האתר העסקי (כשר טק)", [("האתר", "/"), ("ניהול האתר ופניות", "/admin/"), ("שירותים", "/services/"), ("חנות", "/shop/"), ("אטלס רומים", "/roms/")]),
+ ("הצ'אט של הוועד", [("הצ'אט", "https://vaad-kmd.netlify.app/"), ("כניסת מנהל-על", "https://vaad-kmd.netlify.app/#/dev"), ("ניהול הקהילה", "https://vaad-kmd.netlify.app/#/admin")]),
+ ("הפורום מלאכת מחשבת", [("הפורום", "/market/"), ("ניהול הפורום", "/market/admin/"), ("כללי הלוח", "/market/rules/")]),
  ("השרת", [("שולחן עבודה", "/desktop/"), ("ניהול השרת", "/panel/")]),
+ ("כלים חיצוניים", [("גיטהאב: האתר", "https://github.com/shmuel-sinay/-atar-"), ("גיטהאב: הצ'אט", "https://github.com/shmuel-sinay/vaad-kmd"),
+   ("Google Search Console", "https://search.google.com/search-console"), ("Supabase", "https://supabase.com/dashboard"), ("Netlify", "https://app.netlify.com/")]),
 ]
 hb = '''<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>כל המקומות</title>
@@ -527,7 +529,7 @@ h2{margin:0 0 10px;font-size:1.05rem;color:#4b5563}.b{display:flex;gap:10px;flex
 a{display:inline-block;padding:10px 20px;border-radius:8px;background:#1f2937;color:#fff;text-decoration:none;font-weight:600}
 a:hover{background:#374151}</style></head><body><main><h1>כל המקומות</h1>'''
 for _t, _ls in HUB:
-    hb += "<section><h2>%s</h2><div class='b'>%s</div></section>" % (html.escape(_t), "".join('<a href="%s">%s</a>' % (_h, html.escape(_n)) for _n, _h in _ls))
+    hb += "<section><h2>%s</h2><div class='b'>%s</div></section>" % (html.escape(_t), "".join('<a href="%s"%s>%s</a>' % (_h, ' target="_blank" rel="noopener"' if _h.startswith("http") else "", html.escape(_n)) for _n, _h in _ls))
 hb += "</main></body></html>"
 write("/hub/", hb)
 
