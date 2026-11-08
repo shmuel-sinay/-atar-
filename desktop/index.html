@@ -31,7 +31,7 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
 <button id="toggle">כבה קול</button>
 <span id="status"></span>
 <div class="kbd">
-  <textarea id="ktext" placeholder="הקלד או הדבק טקסט ולחץ Enter" title="Enter שולח, Shift+Enter לשורה חדשה"></textarea>
+  <textarea id="ktext" placeholder="לחץ כאן ופשוט הקלד: כל מקש וקיצור עובר ישר לשולחן העבודה" title="טקסט (גם עברית) מודבק בשרת; Ctrl/Alt עם מקש, Enter, חיצים ו-Backspace נשלחים כמקשים"></textarea>
   <button class="send" id="ksend">שלח טקסט</button>
   <input id="kkey" type="password" placeholder="קוד מקלדת" autocomplete="off" inputmode="numeric" hidden>
   <div class="keys"><button data-k="ctrl+c">Ctrl+C</button><button data-k="ctrl+v">Ctrl+V</button><button data-k="ctrl+z">Ctrl+Z</button><button data-k="Escape">Esc</button><button data-k="Return">Enter</button><button data-k="Tab">Tab</button><button data-k="Left">&larr;</button><button data-k="Up">&uarr;</button><button data-k="Down">&darr;</button><button data-k="Right">&rarr;</button></div>
@@ -112,9 +112,43 @@ iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
     var d = JSON.stringify(o);
     if (ws && ws.readyState === 1) ws.send(d); else { q.push(d); if (!ws) connect(); }
   }
-  function sendText(){ var t = $('ktext').value; if (!t) return; send({ type: 'type', text: t }); $('ktext').value = ''; $('ktext').focus(); }
+  // the box works as a live keyboard: shortcuts and special keys go to the server as key combos,
+  // plain text (also Hebrew, also pasted) is sent as text and pasted there
+  var SPECIAL = { Enter: 'Return', Backspace: 'BackSpace', Delete: 'Delete', Tab: 'Tab', Escape: 'Escape',
+    ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', Home: 'Home', End: 'End',
+    PageUp: 'Prior', PageDown: 'Next', Insert: 'Insert', ' ': 'space' };
+  var composing = false;
+  function keyName(e){
+    if (SPECIAL[e.key]) return SPECIAL[e.key];
+    if (/^F\d{1,2}$/.test(e.key)) return e.key;
+    // e.code keeps Latin letters even on a Hebrew layout (Ctrl+C stays ctrl+c)
+    var m = /^Key([A-Z])$/.exec(e.code) || /^Digit(\d)$/.exec(e.code);
+    if (m) return m[1].toLowerCase();
+    return e.key.length === 1 ? e.key.toLowerCase() : '';
+  }
+  function flush(){
+    clearTimeout(ft);
+    var t = $('ktext').value;
+    if (!t || composing) return;
+    send({ type: 'type', text: t }); $('ktext').value = '';
+  }
+  function sendText(){ flush(); $('ktext').focus(); }
   $('ksend').onclick = sendText;
-  $('ktext').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } };
+  $('ktext').addEventListener('keydown', function(e){
+    if (composing || e.isComposing || ['Control', 'Alt', 'Meta', 'Shift', 'AltGraph'].indexOf(e.key) >= 0) return;
+    var mod = e.ctrlKey || e.altKey || e.metaKey;
+    var special = SPECIAL[e.key] && e.key !== ' ';
+    if (!mod && !special) return;              // a plain character: the input event sends it
+    var k = keyName(e); if (!k) return;
+    e.preventDefault();
+    flush();
+    var combo = (e.ctrlKey ? 'ctrl+' : '') + (e.altKey ? 'alt+' : '') + (e.metaKey ? 'super+' : '') + (e.shiftKey && (mod || special) ? 'shift+' : '') + k;
+    send({ type: 'key', key: combo });
+  });
+  $('ktext').addEventListener('compositionstart', function(){ composing = true; });
+  $('ktext').addEventListener('compositionend', function(){ composing = false; flush(); });
+  // short pause so fast typing goes over as one piece instead of one paste per letter
+  var ft; $('ktext').addEventListener('input', function(){ clearTimeout(ft); ft = setTimeout(flush, 150); });
   $('kkey').onkeydown = function(e){
     if (e.key !== 'Enter' || !this.value) return;
     key = this.value; try { localStorage.setItem('kbd-key', key); } catch (x) {}
