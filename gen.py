@@ -516,7 +516,7 @@ HUB = [
  ("האתר הפרטי (כשר טק)", [("האתר", "/"), ("ניהול האתר", "/admin/")]),
  ("הצ'אט של הוועד", [("הצ'אט", "/chat/"), ("כניסת מנהל-על", "/chat/#/dev")]),
  ("הפורום", [("הפורום", "/market/"), ("ניהול הפורום", "/market/admin/")]),
- ("השרת", [("שולחן עבודה", "/desktop/"), ("שולחן עבודה עם קול", "/screen/"), ("ניהול השרת", "/panel/")]),
+ ("השרת", [("שולחן עבודה", "/desktop/"), ("ניהול השרת", "/panel/")]),
 ]
 hb = '''<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>כל המקומות</title>

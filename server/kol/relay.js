@@ -1,4 +1,4 @@
-// ממסר קול: מקבל שמע מהמשדר (בשרת) ומעביר לדף /screen/ באתר.
+// ממסר קול: מקבל שמע מהמשדר (בשרת) ומעביר לדף /desktop/ באתר.
 // מאזין רק ל-127.0.0.1; nginx מעביר אליו את /kol/ws.
 const http = require('http');
 const { WebSocketServer } = require('ws');
@@ -37,7 +37,8 @@ wss.on('connection', (ws, req) => {
   const roomName = (url.searchParams.get('room') || 'main').slice(0, 64);
   const key = url.searchParams.get('key') || '';
 
-  if (ACCESS_KEY && key !== ACCESS_KEY) {
+  // only the sender (the server itself) needs the key; listeners on /desktop/ connect without one
+  if (role === 'sender' && ACCESS_KEY && key !== ACCESS_KEY) {
     sendJson(ws, { type: 'error', message: 'קוד גישה שגוי' });
     return ws.close(4001, 'bad key');
   }
