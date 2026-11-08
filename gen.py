@@ -514,7 +514,7 @@ write("/market/admin/", ma)
 # ---------- HUB: one private page with a button to every group (not linked from anywhere) ----------
 HUB = [
  ("האתר העסקי (כשר טק)", [("האתר", "/"), ("ניהול האתר ופניות", "/admin/"), ("שירותים", "/services/"), ("חנות", "/shop/"), ("אטלס רומים", "/roms/")]),
- ("הצ'אט של הוועד", [("הצ'אט", "https://vaad-kmd.netlify.app/"), ("כניסת מנהל-על", "https://vaad-kmd.netlify.app/#/dev"), ("ניהול הקהילה", "https://vaad-kmd.netlify.app/#/admin")]),
+ ("הצ'אט של הוועד", [("הצ'אט", "/chat/"), ("כניסת מנהל-על", "/chat/#/dev"), ("ניהול הקהילה", "/chat/#/admin")]),
  ("הפורום מלאכת מחשבת", [("הפורום", "/market/"), ("ניהול הפורום", "/market/admin/"), ("כללי הלוח", "/market/rules/")]),
  ("השרת", [("שולחן עבודה", "/desktop/"), ("ניהול השרת", "/panel/")]),
  ("כלים חיצוניים", [("גיטהאב: האתר", "https://github.com/shmuel-sinay/-atar-"), ("גיטהאב: הצ'אט", "https://github.com/shmuel-sinay/vaad-kmd"),
