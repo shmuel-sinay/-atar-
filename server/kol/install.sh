@@ -81,5 +81,5 @@ nginx -t >/dev/null 2>&1 && systemctl reload nginx
 sleep 3
 echo
 echo "relay:  $(systemctl is-active kol-relay)   sender: $(systemctl is-active kol-sender)"
-echo "== מוכן. פותחים https://kosher-tek.com/screen/"
+echo "== מוכן. פותחים https://kosher-tek.com/desktop/"
 echo "   תוכנות שכבר פתוחות בשולחן העבודה (למשל הדפדפן) צריך לסגור ולפתוח מחדש."

@@ -59,6 +59,6 @@
 אבטחה: כתיבה (POST/PUT) ממקור זר נחסמת (בדיקת Origin), כותרות nosniff / X-Frame-Options בכל תשובה, תמונות JPEG בלבד, אין הבדל בזמן תגובה בין משתמש קיים ללא קיים בהתחברות.
 
 ## שולחן עבודה עם קול
-`/screen/` מציג את שולחן העבודה המרוחק (`/desktop/`) עם הקול שלו. הקוד ב-`server/kol/`:
+`/desktop/` הוא דף אחד: שולחן העבודה המרוחק (noVNC, מוגש תחת `/desktop/app/`) והקול שלו, שמתחבר לבד ומתנגן בלחיצה הראשונה על הדף. הקוד ב-`server/kol/`:
 ממסר (`relay.js`, פורט 8097, nginx מעביר אליו את `/kol/ws`) ומשדר (`sender.js`) שקולט את הקול מרמקול וירטואלי.
-התקנה פעם אחת: `sudo bash /var/www/kosher-site/server/kol/install.sh` (מדפיס את קוד הגישה פעם אחת; נשמר ב-`/etc/kol/env`).
+התקנה פעם אחת: `sudo bash /var/www/kosher-site/server/kol/install.sh` (הקוד ב-`/etc/kol/env` נדרש רק מהמשדר בשרת; המאזינים בדף מתחברים בלי קוד).
