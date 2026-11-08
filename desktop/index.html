@@ -9,40 +9,35 @@
 :root{--bg:#111827;--bar:#1f2937;--text:#f3f4f6;--muted:#9ca3af;--accent:#2563eb;--ok:#22c55e;--bad:#f87171;--border:#374151}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Arial,sans-serif}
-body{display:flex;flex-direction:column}
-.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:var(--bar);border-bottom:1px solid var(--border)}
-.bar button{padding:8px 14px;font-size:1rem;font-weight:700;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
-.bar button.on{background:var(--ok);color:#06210f}
-.bar input[type=password]{width:110px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1rem}
-.bar input[type=range]{width:110px}
-.meter{width:70px;height:8px;border-radius:5px;background:var(--border);overflow:hidden}
-.meter>div{height:100%;width:0;background:var(--ok);transition:width .08s linear}
+body{display:flex;flex-direction:row}
+.side{width:190px;flex:none;display:flex;flex-direction:column;gap:10px;padding:10px;background:var(--bar);border-inline-end:1px solid var(--border);overflow-y:auto}
+.side #toggle{padding:9px;font-size:1rem;font-weight:700;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
+.side #toggle.on{background:var(--ok);color:#06210f}
+#status{font-size:.85rem}
 #status{color:var(--muted);font-size:.95rem}
 #status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
-.kbd{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 12px;background:var(--bar);border-bottom:1px solid var(--border)}
-.kbd textarea{flex:1;min-width:200px;height:36px;resize:vertical;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit}
+.kbd{display:flex;flex-direction:column;gap:8px}
+.kbd .keys{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kbd textarea{width:100%;height:90px;resize:vertical;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit}
 .kbd button{padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-weight:600;cursor:pointer;direction:ltr}
 .kbd button.send{background:var(--accent);border-color:var(--accent);color:#fff;direction:rtl}
-.kbd input{width:100px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.kbd input{width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
 #kst{color:var(--muted);font-size:.9rem}#kst.ok{color:var(--ok)}#kst.bad{color:var(--bad)}
-iframe{flex:1;width:100%;border:0;background:#000}
+iframe{flex:1;min-width:0;height:100%;border:0;background:#000}
 </style>
 </head>
 <body>
-<div class="bar">
-  <button id="toggle">כבה קול</button>
-  <label for="vol" style="color:var(--muted)">עוצמה</label>
-  <input id="vol" type="range" min="0" max="2" step="0.05" value="1">
-  <div class="meter"><div id="level"></div></div>
-  <span id="status"></span>
-</div>
+<aside class="side">
+<button id="toggle">כבה קול</button>
+<span id="status"></span>
 <div class="kbd">
   <textarea id="ktext" placeholder="הקלד או הדבק טקסט ולחץ Enter" title="Enter שולח, Shift+Enter לשורה חדשה"></textarea>
   <button class="send" id="ksend">שלח טקסט</button>
   <input id="kkey" type="password" placeholder="קוד מקלדת" autocomplete="off" inputmode="numeric" hidden>
-  <button data-k="ctrl+c">Ctrl+C</button><button data-k="ctrl+v">Ctrl+V</button><button data-k="ctrl+z">Ctrl+Z</button><button data-k="ctrl+a">Ctrl+A</button><button data-k="Escape">Esc</button><button data-k="Return">Enter</button><button data-k="Tab">Tab</button><button data-k="alt+Tab">Alt+Tab</button><button data-k="Left">&larr;</button><button data-k="Up">&uarr;</button><button data-k="Down">&darr;</button><button data-k="Right">&rarr;</button><button data-k="BackSpace">Backspace</button>
+  <div class="keys"><button data-k="ctrl+c">Ctrl+C</button><button data-k="ctrl+v">Ctrl+V</button><button data-k="ctrl+z">Ctrl+Z</button><button data-k="Escape">Esc</button><button data-k="Return">Enter</button><button data-k="Tab">Tab</button><button data-k="Left">&larr;</button><button data-k="Up">&uarr;</button><button data-k="Down">&darr;</button><button data-k="Right">&rarr;</button></div>
   <span id="kst"></span>
 </div>
+</aside>
 <iframe id="desk" src="/desktop/app/vnc.html?autoconnect=1&resize=scale&reconnect=true" allow="clipboard-read; clipboard-write" title="שולחן עבודה"></iframe>
 <script>
 (function(){
@@ -71,7 +66,7 @@ iframe{flex:1;width:100%;border:0;background:#000}
     var ab = ctx.createBuffer(ch, frames, cfg.sampleRate);
     for (var c = 0; c < ch; c++) {
       var out = ab.getChannelData(c);
-      for (var i = 0; i < frames; i++) { var v = pcm[i * ch + c] / 32768; out[i] = v; if (v < 0) v = -v; if (v > peak) peak = v; }
+      for (var i = 0; i < frames; i++) { var v = pcm[i * ch + c] / 32768; out[i] = v; }
     }
     var now = ctx.currentTime;
     if (nextTime < now + 0.01) nextTime = now + DELAY;
@@ -81,7 +76,7 @@ iframe{flex:1;width:100%;border:0;background:#000}
   }
   // browsers allow sound only after a touch: the first click/tap/key anywhere (also inside the desktop) unlocks it
   ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-  gain = ctx.createGain(); gain.gain.value = +$('vol').value; gain.connect(ctx.destination);
+  gain = ctx.createGain(); gain.gain.value = 1; gain.connect(ctx.destination);
   function unlock(){ if (on && ctx.state !== 'running') ctx.resume().then(function(){ if (cfg) status('קול פעיל', 'ok'); }); }
   ['pointerdown', 'keydown', 'touchstart'].forEach(function(ev){ document.addEventListener(ev, unlock, true); });
   window.addEventListener('blur', function(){ setTimeout(unlock, 0); }); // a click inside the desktop frame moves focus to it
@@ -90,8 +85,6 @@ iframe{flex:1;width:100%;border:0;background:#000}
     if (on) { ctx.resume(); connect(); this.textContent = 'כבה קול'; this.className = ''; }
     else { clearTimeout(retry); try { ws.close(); } catch (e) {} ctx.suspend(); cfg = null; status('הקול כבוי'); this.textContent = 'הפעל קול'; this.className = 'on'; }
   };
-  $('vol').oninput = function(){ gain.gain.value = +$('vol').value; };
-  setInterval(function(){ $('level').style.width = Math.min(100, peak * 100) + '%'; peak = 0; }, 100);
   connect();
 })();
 </script>
